@@ -1,5 +1,9 @@
 -- Main client program for monitoring the space probe
 
+-- Requirents:
+-- lua 5.1 or newer
+-- lwitter, easily installed via luarocks as "luarocks install twitter"
+
 require "config"
 require "utils"
 require "probe"
