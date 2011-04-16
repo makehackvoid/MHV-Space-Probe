@@ -14,7 +14,7 @@ config = {
 
 	-- Knob has to move by this much (in raw values, scale 0-1023)
 	-- to be considered a new value
-	knob_deadband = 25,
+	knob_deadband = 10,
 
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",
