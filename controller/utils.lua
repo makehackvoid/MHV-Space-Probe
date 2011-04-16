@@ -5,6 +5,8 @@ function log(message)
 end
 
 function sleep(seconds)
+	--next = os.time() + 1
+	--while(os.time() < next) do end
 	os.execute(string.format("sleep %d", seconds))
 end
 

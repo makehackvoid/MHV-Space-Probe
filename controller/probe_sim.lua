@@ -25,7 +25,11 @@ end
 -- Test if the probe is offline. Makes an attempt to reconnect
 -- if it is.
 local function get_offline()
-	return io.open("/tmp/space_probe_knob", "r") == nil
+	rs = io.open("/tmp/space_probe_knob", "r")
+	if rs then
+		rs:close()
+	end
+	return rs == nil
 end
 
 local function set_dial(raw_value)

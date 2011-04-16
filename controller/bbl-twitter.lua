@@ -12,7 +12,20 @@
 -- If you have easy access to luarocks + working C compiler then a better option is
 -- ltwitter - https://github.com/TheLinx/ltwitter
 --
+--
+-- Example code
+--
+-- c=client(<My consumer key>, <My consumer secret>)
+-- update_status(c, "My awesome new tweet!")
+--
+-- The client step in the example will prompt you to verify a PIN. 
+-- If you don't want to authorise it interactively, supply request_token/request_secret
+-- as additional params to client() or assign them to twitter_config
+--
+-- TODO: make less bodgy. :)
 
+
+-- Configuration elements for twitter client
 twitter_config = {
 	http_get = "wget -q -O -", -- "curl -s"
 	http_post = "wget -q -O - --post-data", -- "curl -s --data"	
@@ -45,10 +58,10 @@ local function sign_http_args(client, method, url, args)
 end
 
 function cmd_output(cmd)
-	print("Running " .. cmd)
+	--print("Running " .. cmd)
 	local f = assert(io.popen(cmd, 'r'))
 	local res = assert(f:read('*a'))
-	print ("Got back " .. res)
+	--print ("Got back " .. res)
 	f:close()
 	return res
 end
@@ -116,7 +129,6 @@ function update_status(client, tweet)
 	local args = get_base_args(client)
 	args.status = tweet
 	res = http_post(client, "http://api.twitter.com/1/statuses/update.xml", args)
-	assert(res ~= "", "Unable to tweet")
 	return res
 end
 							  

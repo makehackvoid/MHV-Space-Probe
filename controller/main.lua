@@ -8,6 +8,10 @@ require "config"
 require "utils"
 require "probe"
 require "knob"
+require "bbl-twitter"
+
+twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret, 
+								config.oauth_access_key, config.oauth_access_secret)
 
 function startup()
 	-- make sure we can see the probe before we start up at all
@@ -28,9 +32,12 @@ function startup()
 	end
 end
 	  
+warnings = 0
+
 -- State
 function space_is_open()
 	check_probe_connection()
+	sleep(1)
 
 	local hours = knob.get_movement()
 	if hours == 0 then
@@ -70,6 +77,7 @@ end
 -- State
 function space_is_closed()
 	check_probe_connection()
+	sleep(1)
 
 	local hours = knob.get_movement()
 	if hours ~= nil and hours > 0 then
@@ -93,12 +101,14 @@ end
 -- Space just opened, or opening hours changed
 function space_closing_in(hours, was_already_open)
 	est_closing_time = os.time() + hours*60*60	
+	log("Estimated closing " .. os.date(nil, est_closing_time))
 
-	probe.slow_green_blink()
 	probe.set_dial(translate(hours, config.dial_table))
-	adverb = was_already_open and "still" or "now"
-	log("Space is " .. adverb  .. " open, estimated closing time " .. os.date(nil, est_closing_time))
-	probe.leds_off()
+	local prep = was_already_open and "will remain" or "is now"
+	local adverb = was_already_open and "another" or "" 
+	local msg = string.format("The MHV space %s open for approximately %s %s", prep, adverb, hours_rounded(hours))
+	update_world(msg)
+
 	warnings = 0
 	return space_is_open()
 end
@@ -106,10 +116,46 @@ end
 -- Space is closing now
 function space_closing_now()
 	probe.set_dial(0)
-	probe.slow_green_blink()
-	log("Space is now closed")
-	probe.leds_off()
+	update_world("The MHV space is now closed (test)")
 	return space_is_closed()
 end
+
+function update_world(msg)
+	probe.slow_green_blink()
+	msg = string.gsub(msg, "  ", " ")
+	log(msg)
+	local retries = 0
+	while update_status(twitter_client, msg) == "" and retries < config.max_twitter_retries do
+		sleep(2)
+		retries = retries + 1
+	end
+	if retries == config.max_twitter_retries then
+		log("Failed to tweet... :(")
+	end
+	probe.leds_off()
+end
+
+local function round(n)
+	return math.floor(n+0.5)
+end
+
+-- Return number of hours, rounded to nearest 1/4 hour, as string
+function hours_rounded(hours)
+	-- precision needed depends on how far away closing time is
+	if hours > 6 then 
+		hours = round(hours)
+	elseif hours > 2 then 
+		hours = round(hours * 2) / 2
+	else
+		hours = round(hours * 4) / 4
+	end
+	local fraction_name = { "", " 1/4", " 1/2", " 3/4" }
+	local whole = math.floor(hours)
+	if whole == 0 and hours > 0.125 then whole = "" end
+	local suffix = "s"
+	if hours <= 1 then suffix = "" end
+	return string.format("%s%s hour%s", whole, fraction_name[((hours % 1)*4)+1], suffix)
+end
+
 
 return startup()
