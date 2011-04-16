@@ -8,123 +8,101 @@ else
 	dofile("probe.lua")
 end
 
-local est_closing_time = os.time() + translate(get_knob_position(), config.knob_table)*60*60
-
-function main()
+function startup()
 	-- make sure we can see the probe before we start up at all
-	while get_probe_offline() do
-		probe_is_offline()
-	end
+	check_probe_connection()
 
 	-- Determine initial space state (doesn't send any notices during startup)
-	space_open = ( get_knob_position() > config.knob_deadband )
+	local pos = get_knob_position()
+	local space_open = ( pos > config.knob_deadband )
 	log("Starting with space " .. "open" and space_open or "closed")
-	if space_open then log ("Estimated closing " .. os.date(nil, est_closing_time)) end
 
+	-- Kick off with our initial state
 	if space_open then 
-		space_is_open() 
+		est_closing_time = os.time() + translate(pos, config.knob_table)*60*60
+		log("Estimated closing " .. os.date(nil, est_closing_time)) end
+		return space_is_open() 
 	else 
-		space_is_closed() 
+		return space_is_closed() 
 	end
 end
-
--- Events all take result of get_knob_position as an argument
-events = {}
-function events.evt_probe_offline(knob_value) 
-	return knob_value == nil and get_probe_offline() 
-end
-
-function events.evt_nothing(knob_value) 
-	return knob_value == nil and not get_probe_offline() 
-end
-
-function events.evt_knob_zero(knob_value) 
-	return knob_value != nil and
-		knob_value < translate(config.knob_deadband, config.knob_table) 
-end
-
-function events.evt_knob_moved_nonzero(knob_value) 
-	return knob_value != nil and 
-		knob_value > translate(config.knob_deadband, config.knob_table)
-end
-
--- States
-states = {}
-function states.is_open() end
-function states.is_closed() end
-
--- State transition event handler table
-
-states = {
-	{ states.is_open= { 
-		  events.evt_knob_zero=space_closing_now,
-		  events.evt_knob_moved_nonzero=space_closing_in,
-		  events.evt_probe_offline=probe_is_offline,
-		  events.evt_nothing=nil
-     } 
-  },
-
-	{ states.is_closed= {
-		  events.evt_knob_zero=nil,
-		  events.evt_knob_moved_nonzero=space_closing_in,
-		  events.evt_probe_offline=probe_is_offline,
-		  events.evt_nothing=nil
-	  }
-  }
-}
-
-knob_hours = nil
-
-function step_fsm(from_state)
-	knob_hours = get_knob_movement()
-
-	
-end
-
 	  
--- Handler : Probe is offline
-function probe_is_offline(state, event)
-	log("Probe offline. Waiting for reconnection...")
-	while get_probe_offline() do
-		sleep(1)
+-- State
+function space_is_open()
+	check_probe_connection()
+
+	local hours = get_knob_movement()
+	if hours == 0 then
+		-- Space just closed
+		space_closing_now()
+		return space_is_closed()
+	elseif hours ~= nil then
+		-- Dial moved to a different non-zero number
+		space_closing_in(hours, true)
 	end
-	return step_fsm(state)
+	return space_is_open()
 end
 
--- Handler: Space just opened, or opening hours changed
-function space_closing_in(state, event)
-	was_already_open = state==states.is_open
-	est_closing_time = os.time() + knob_hours*60*60	
+-- State
+function space_is_closed()
+	check_probe_connection()
+
+	local hours = get_knob_movement()
+	if hours > 0 then
+		-- Space just opened
+		space_closing_in(hours, false)
+		return space_is_open()
+	end
+	return space_is_closed()
+end
+
+
+function check_probe_connection()
+	if get_probe_offline() then
+		log("Probe offline. Waiting for reconnection...")
+		while get_probe_offline() do
+			sleep(1)
+		end
+	end
+end
+
+-- Space just opened, or opening hours changed
+function space_closing_in(hours, was_already_open)
+	est_closing_time = os.time() + hours*60*60	
 
 	set_leds(0,255,0,2000) -- slow green blink
 	set_dial(translate(hours, config.dial_table))
 	adverb = was_already_open and "still" or "now"
 	log("Space is " .. adverb  .. " open, estimated closing time " .. os.date(nil, est_closing_time))
-
 	set_leds(0,0,0,0) -- no LEDs while space is open
-	return step_fsm(states.is_open)
+	return space_is_open()
 end
 
--- Handler: Space is closing now
-function space_closing_now(state, event)
+-- Space is closing now
+function space_closing_now()
 	set_dial(0)
 	set_leds(0,255,0,2000) -- slow green blink
 	log("Space is now closed")
 	set_leds(0,0,0,0) -- done
-	return step_fsm(states.is_closed)
+	return space_is_closed()
 end
 
 
--- Has the knob's raw position moved legitimately? If so, return new hours shown. If not, return nil.
+
+-- Has the knob moved legitimately? If so, return new hours shown. If not, return nil.
 function get_knob_movement()
+	local raw = get_knob_position()
+	if(raw ~= nil and raw < config.knob_deadband) then
+		raw = 0
+	end
+
 	if last_knob_still_pos == nil then
 		-- initialise globals for tracking the knob position
-		last_knob_still_pos = get_knob_position()
+		last_knob_still_pos = raw
 		last_knob_moving_pos = last_knob_still_pos
 		last_knob_movetime = os.time()
 	end
 
-	raw = get_knob_position()
 	if raw == nil or math.abs(raw - last_knob_still_pos) < config.knob_deadband then 	
 		return nil -- offline or hasn't moved from last resting spot
 	end
@@ -148,4 +126,4 @@ function get_knob_movement()
 end
 
 
-main()
+startup()
