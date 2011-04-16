@@ -22,24 +22,42 @@ twitter_config = {
 	md5sum = "md5sum",
 }
 
-local function join_http_args(args)
-	local first = false
+local function join_http_args(args, escape_all)
+	print("expanding " .. tostring(args))
+	local first = true
 	local res = ""
-	for a,v in ipairs(args or {}) do 
+	local ampersand
+	local equals
+	if escape_all then
+		ampersand = "%26"
+		equals = "%3D"
+	else
+		ampersand = "&"
+		equals = "="
+	end
+
+	for a,v in orderedPairs(args or {}) do 
+		print("arg " .. a .. " = " .. v)
 		if not first then
-			res = res .. "&"
+			res = res .. ampersand
 		end
-		first = true
-		res = res .. a .. "=" .. url_encode(v)
+		first = false
+		res = res .. a .. equals .. url_encode(v)
 	end
 	return res
 end
 
 local function sign_http_args(client, method, url, args)
 	local data = join_http_args(args)
-	local query = string.format("%s&%s&%s", method, url_encode(url), url_encode(data))		
-	local cmd = string.format("openssl sha1 -hmac \"%s&%s\" -binary | openssl base64", client.consumer_secret, client.token_secret or "")
+	local escdata = join_http_args(args, true)
+	print("data " .. data)
+	print("escdata " .. escdata)
+	local query = string.format("%s&%s&%s", method, url_encode(url), escdata)		
+	local cmd = string.format("echo -n \"%s\" | %s sha1 -hmac \"%s&%s\" -binary | openssl base64", 
+				 						 query, twitter_config.openssl, 
+										 client.consumer_secret, client.token_secret or "")
 	local hash = cmd_output(cmd)
+	hash = string.gsub(hash, "\n", "")
 	return data .. "&oauth_signature=" .. url_encode(hash)
 end
 
@@ -64,7 +82,7 @@ local function http_get(client, url, args)
 end
 
 local function http_post(client, url, postargs)
-	local cmd = string.format("%s \"%s\" \"%s\"", twitter_config.http_post, sign_http_args(ckuebtm "POST", url, postargs), url)
+	local cmd = string.format("%s \"%s\" \"%s\"", twitter_config.http_post, sign_http_args(client, "POST", url, postargs), url)
 	return cmd_output(cmd)
 end
 
@@ -93,11 +111,11 @@ local function get_access_token(client)
 							})
 	assert(resp ~= "", "Could not get OAuth request token")
 	
-	local req_token = string.match(resp, "oauth_token=[%da]")
-	local req_secret = string.match(resp, "oauth_token_secret=[%da]")
+	local req_token = string.match(resp, "oauth_token=([^&]*)")
+	local req_secret = string.match(resp, "oauth_token_secret=([^&]*)")
 
 	print("Open this URL in your browser and enter back the PIN")
-	print("http://twitter.com/oauth/authorize?oauth_token=" .. client.token_secret)
+	print("http://twitter.com/oauth/authorize?oauth_token=" .. req_token)
 	local req_pin = io.read("*line")
 
 	resp = http_get( client, "http://twitter.com/oauth/access_token",
@@ -112,8 +130,8 @@ local function get_access_token(client)
 						  })
 	assert(resp ~= "", "Unable to get access token")
 
-	client.token_key = string.match(resp, "oauth_token=[%da]")
-	client.token_secret = string.match(resp, "oauth_token_secret=[%da]")
+	client.token_key = string.match(resp, "oauth_token=([^&]*)")
+	client.token_secret = string.match(resp, "oauth_token_secret=([^&]*)")
 	print("Got OAuth key & secret")
 	print(client.token_key)
 	print(client.token_secret)
@@ -123,7 +141,7 @@ end
 function client(consumer_key, consumer_secret, token_key, token_secret, verifier)
 	print("hello")
 	local client = {}
-	for j,x in ipairs(twitter_config) do client[j] = x end
+	for j,x in pairs(twitter_config) do client[j] = x end
 	-- args can be set in twitter_config if you want them global
 	client.consumer_key = consumer_key or client.consumer_key 
 	client.consumer_secret = consumer_secret or client.consumer_secret
@@ -152,13 +170,66 @@ function url_decode(str)
   return str
 end
 
--- Taken from http://lua-users.org/wiki/StringRecipes
+-- Taken from http://lua-users.org/wiki/StringRecipes then modified for RFC3986
 function url_encode(str)
   if (str) then
-    str = string.gsub (str, "\n", "\r\n")
-    str = string.gsub (str, "([^%w ])",
-        function (c) return string.format ("%%%02X", string.byte(c)) end)
-    str = string.gsub (str, " ", "+")
+	  print("encoding " .. str)
+	  str = string.gsub (str, "([^%w-._~ ])",
+								function (c) return string.format ("%%%02X", string.byte(c)) end)
+	  print("got back " .. str)	 
   end
   return str	
+end
+
+
+--  taken from http://lua-users.org/wiki/SortedIteration
+--[[
+Ordered table iterator, allow to iterate on the natural order of the keys of a
+table.
+
+Example:
+]]
+
+function __genOrderedIndex( t )
+    local orderedIndex = {}
+    for key in pairs(t) do
+        table.insert( orderedIndex, key )
+    end
+    table.sort( orderedIndex )
+    return orderedIndex
+end
+
+function orderedNext(t, state)
+    -- Equivalent of the next function, but returns the keys in the alphabetic
+    -- order. We use a temporary ordered key table that is stored in the
+    -- table being iterated.
+
+    --print("orderedNext: state = "..tostring(state) )
+    if state == nil then
+        -- the first time, generate the index
+        t.__orderedIndex = __genOrderedIndex( t )
+        key = t.__orderedIndex[1]
+        return key, t[key]
+    end
+    -- fetch the next value
+    key = nil
+    for i = 1,table.getn(t.__orderedIndex) do
+        if t.__orderedIndex[i] == state then
+            key = t.__orderedIndex[i+1]
+        end
+    end
+
+    if key then
+        return key, t[key]
+    end
+
+    -- no more value to return, cleanup
+    t.__orderedIndex = nil
+    return
+end
+
+function orderedPairs(t)
+    -- Equivalent of the pairs() function on tables. Allows to iterate
+    -- in order
+    return orderedNext, t, nil
 end
