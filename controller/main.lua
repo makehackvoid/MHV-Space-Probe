@@ -116,7 +116,7 @@ end
 -- Space is closing now
 function space_closing_now()
 	probe.set_dial(0)
-	update_world("The MHV space is now closed (test)")
+	update_world("The MHV space is now closed")
 	return space_is_closed()
 end
 
