@@ -18,8 +18,9 @@ function startup()
 	check_probe_connection()
 
 	-- Determine initial space state (doesn't send any notices during startup)
+	probe.leds_off()
 	local pos = probe.get_position()
-	local space_open = ( pos > config.knob_deadband )
+	local space_open = pos and ( pos > config.knob_deadband )
 	log("Starting with space " .. "open" and space_open or "closed")
 
 	-- Kick off with our initial state
@@ -34,10 +35,15 @@ end
 	  
 warnings = 0
 
+space_opened_at=os.time()
+
 -- State
 function space_is_open()
 	check_probe_connection()
 	sleep(1)
+
+	local hours_left = (est_closing_time - os.time())/60/60
+	probe.set_dial(round(translate(hours_left, config.dial_table)))
 
 	local hours = knob.get_movement()
 	if hours == 0 then
@@ -103,10 +109,15 @@ function space_closing_in(hours, was_already_open)
 	est_closing_time = os.time() + hours*60*60	
 	log("Estimated closing " .. os.date(nil, est_closing_time))
 
-	probe.set_dial(translate(hours, config.dial_table))
+	if not was_already_open then
+		space_opened_at = os.time()
+	end
+	probe.set_dial(round(translate(hours, config.dial_table)))
 	local prep = was_already_open and "will remain" or "is now"
 	local adverb = was_already_open and "another" or "" 
-	local msg = string.format("The MHV space %s open for approximately %s %s", prep, adverb, hours_rounded(hours))
+	local est_closing_rounded = round(est_closing_time * 60*15) /60/15 -- round to 15 minute interval
+	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
+									  prep, adverb, hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
 	update_world(msg)
 
 	warnings = 0
@@ -116,28 +127,52 @@ end
 -- Space is closing now
 function space_closing_now()
 	probe.set_dial(0)
-	update_world("The MHV space is now closed")
+
+	local duration = os.time() - space_opened_at
+	if duration < 180 then
+		duration = string.format("%d seconds", duration)
+	elseif duration < 60*180 then
+		duration = string.format("%d minutes", duration/60)
+	elseif duration < 60*60*24 then
+		duration = hours_rounded(duration/60/60)
+	else
+		duration = string.format("%.1f days", duration/60/60/24)
+	end
+	-- ironically, the duraiton is necessary to stop twitter dropping duplicate tweets!
+	update_world("The MHV space is now closed (was open " .. duration .. ")")
 	return space_is_closed()
 end
 
 function update_world(msg)
-	probe.slow_green_blink()
+	probe.fast_green_blink()
 	msg = string.gsub(msg, "  ", " ")
 	log(msg)
+
+	-- email
+	local email = io.open("/tmp/mhv_email", "w+")
+	email:write("Date: " .. os.date() .. "\n")
+	email:write("From: " .. config.smtp_from .. "\n")
+	email:write("To: " .. config.smtp_to .. "\n")
+	email:write("Subject: " .. msg .. "\n")
+	email:write("\n\nThis message was sent automatically by the MHV Space Probe.\n\n")
+	email:close()
+	os.execute("cat /tmp/mhv_email | " .. config.smtp_cmd .. " &")
+
+	-- twitter
 	local retries = 0
 	while update_status(twitter_client, msg) == "" and retries < config.max_twitter_retries do
-		sleep(2)
+		probe.get_offline() -- keep the probe awake
+		sleep(5)
+		probe.get_offline() -- keep the probe awake
 		retries = retries + 1
 	end
 	if retries == config.max_twitter_retries then
 		log("Failed to tweet... :(")
 	end
+	log("Done communicating message")
 	probe.leds_off()
 end
 
-local function round(n)
-	return math.floor(n+0.5)
-end
 
 -- Return number of hours, rounded to nearest 1/4 hour, as string
 function hours_rounded(hours)

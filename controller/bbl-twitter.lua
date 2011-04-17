@@ -27,8 +27,8 @@
 
 -- Configuration elements for twitter client
 twitter_config = {
-	http_get = "wget -q -O -", -- "curl -s"
-	http_post = "wget -q -O - --post-data", -- "curl -s --data"	
+	http_get = "wget --timeout=5 -q -O -", -- "curl -s"
+	http_post = "wget --timeout=5 -q -O - --post-data", -- "curl -s --data"	
 	openssl = "openssl",
 }
 

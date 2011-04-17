@@ -56,7 +56,7 @@ const int BT_TX = 3;
 const int BEEP_HZ = 1720; // a pretty annoying pitch
 const long BEEP_US = 1000000/BEEP_HZ;
 
-const int CMD_TIMEOUT_MS = 5000;
+const int CMD_TIMEOUT_MS = 20000;
 
 NewSoftSerial btSerial(BT_RX, BT_TX);
 
