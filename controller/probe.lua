@@ -70,7 +70,7 @@ local function set_leds(r,g,b,blink_on_time,blink_off_time)
 end
 
 local function buzz(seconds)
-	send_command(string.format("B%04d", seconds))
+	send_command(string.format("B%04d", seconds*1000))
 end
 
 local function get_position()
