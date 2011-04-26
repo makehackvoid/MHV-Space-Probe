@@ -26,6 +26,8 @@ local function get_knob_movement()
 		return nil -- offline or hasn't moved from last resting spot
 	end
 
+	probe.fast_green_blink() -- on the move so start blinking
+
 	if math.abs(raw - last_knob_moving_pos) > config.knob_deadband then		      
 		last_knob_still_pos = -10000 -- even if it goes back where it came from, counts as a move now
 		last_knob_moving_pos = raw
