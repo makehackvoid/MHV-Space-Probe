@@ -19,8 +19,12 @@ function startup()
 	-- Determine initial space state (doesn't send any notices during startup)
 	probe.leds_off()
 	local pos = probe.get_position()
-	local space_open = pos and ( pos > config.knob_deadband )
-	log("Starting with space " .. "open" and space_open or "closed")
+	local hours = translate(pos, config.knob_table)
+	log("Initial position " .. pos .. " translates to " .. hours)
+	local space_open = translate(pos, config.knob_table) > 0.25
+	local starting = "open"
+	if not space_open then starting = "closed" end
+	log("Starting with space " .. starting)
 
 	if space_open then
 		probe.green_glow()
@@ -28,7 +32,7 @@ function startup()
 
 	-- Kick off with our initial state
 	if space_open then 
-		est_closing_time = os.time() + translate(pos, config.knob_table)*60*60
+		est_closing_time = os.time() + hours*60*60
 		log("Estimated closing " .. os.date(nil, est_closing_time))
 		return space_is_open() 
 	else 
@@ -118,7 +122,7 @@ function space_closing_in(hours, was_already_open)
 	probe.set_dial(round(translate(hours, config.dial_table)))
 	local prep = was_already_open and "will remain" or "is now"
 	local adverb = was_already_open and "another" or "" 
-	local est_closing_rounded = round(est_closing_time * 60*15) /60/15 -- round to 15 minute interval
+	local est_closing_rounded = round(est_closing_time /60/15) *60*15 -- round to 15 minute interval
 	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
 									  prep, adverb, hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
 	update_world(msg)
@@ -143,7 +147,7 @@ function space_closing_now()
 	else
 		duration = string.format("%.1f days", duration/60/60/24)
 	end
-	-- ironically, the duraiton is necessary to stop twitter dropping duplicate tweets!
+	-- appending the duration open is necessary to stop twitter dropping duplicate tweets!
 	update_world("The MHV space is now closed (was open " .. duration .. ")")
 	return space_is_closed()
 end
