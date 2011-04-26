@@ -15,7 +15,7 @@ config = {
 
 	-- Knob has to move by this much (in raw values, scale 0-1023)
 	-- to be considered a new value
-	knob_deadband = 10,
+	knob_deadband = 15,
 
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",
@@ -33,21 +33,20 @@ config = {
 	max_email_retries = 20,
 
 
-	-- Calibration table for the knob
+ 	-- Calibration table for the knob
 	-- values are [raw-value, hours} where raw-value is
 	-- the ADC reading 0-1023 from the probe
 	knob_table = { 
-		{ 0, 0 }, 
-		{ 17, 1},
-		{ 121, 2},
-		{ 223, 3},
-		{ 331, 4},
-		{ 342, 5 }, 
-		{ 546, 6 },
-		{ 658, 7 },
-		{ 761, 8 },
-		{ 862, 9 },
-		{ 961, 10 } 
+		{ 149, 0 }, 
+		{ 235, 1},
+		{ 343, 2},
+		{ 439, 3},
+		{ 546, 4},
+		{ 662, 5 }, 
+		{ 762, 6 },
+		{ 860, 7 },
+		{ 957, 8 },
+		{ 1014, 9 },
 	},
 
 	-- Calibration table for the readback dial
