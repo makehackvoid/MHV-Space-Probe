@@ -2,7 +2,6 @@
 
 -- Requirents:
 -- lua 5.1 or newer
--- lwitter, easily installed via luarocks as "luarocks install twitter"
 
 require "config"
 require "utils"
@@ -22,6 +21,10 @@ function startup()
 	local pos = probe.get_position()
 	local space_open = pos and ( pos > config.knob_deadband )
 	log("Starting with space " .. "open" and space_open or "closed")
+
+	if space_open then
+		probe.green_glow()
+	end
 
 	-- Kick off with our initial state
 	if space_open then 
@@ -63,17 +66,17 @@ function space_is_open()
 	elseif os.time() + 1*60 > est_closing_time and warnings < 3 then -- 1 minute to est. closing
 		log("1 minute to estimated closing...")
 		probe.buzz(10)
-		probe.slow_blue_blink(300)
+		probe.slow_blue_blink(250)
 		warnings = 3
 	elseif os.time() + 5*60 > est_closing_time and warnings < 2 then -- 5 minutes to est. closing
 		log("5 minutes to estimated closing...")
 		probe.buzz(5)
-		probe.slow_blue_blink(1000)
+		probe.slow_blue_blink(500)
 		warnings = 2
 	elseif os.time() + 30*60 > est_closing_time and warnings < 1 then -- 30 minutes to est. closing
 		log("30 minutes to estimated closing...")
 		probe.buzz(2)
-		probe.slow_blue_blink(3000)
+		probe.slow_blue_blink(1000)
 		warnings = 1
 	end
 
@@ -119,6 +122,8 @@ function space_closing_in(hours, was_already_open)
 	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
 									  prep, adverb, hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
 	update_world(msg)
+
+	probe.green_glow()
 
 	warnings = 0
 	return space_is_open()
