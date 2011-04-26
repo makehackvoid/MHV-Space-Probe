@@ -65,6 +65,9 @@ long stop_beep_ms = 0;
 long last_cmd_ms = 0;
 int on_duty=100, off_duty=500;
 
+int knob_pos = 0;
+const int KNOB_SAMPLES=10;
+
 long last_ms = 0;
 
 void setup()
@@ -86,6 +89,8 @@ void loop()
 {
   long ms = millis();
   check_cmd(ms);
+  
+  knob_pos = ((((long)knob_pos) * (KNOB_SAMPLES-1)) + analogRead(KNOB_PIN)) / KNOB_SAMPLES; // rolling avg
   
   if (last_ms > ms) { // millis() has wrapped! uptime ftw!
     last_cmd_ms = 0; 
@@ -161,7 +166,7 @@ void process_cmd()
        
      case 'K': // read knob pos
        char resp[5];
-       snprintf(resp, 5, "%04d", analogRead(KNOB_PIN));
+       snprintf(resp, 5, "%04d", knob_pos);
        btSerial.println(resp);
        break;
        
