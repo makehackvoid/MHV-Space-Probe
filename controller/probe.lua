@@ -53,6 +53,11 @@ local function send_command(cmd)
 		ttyr = nil
 		ttyw = nil
 	end
+
+	-- flush anything left over in input from the probe rfcomm file
+	-- this line is the only way I can find in pure lua to time out a file read. Whither select()?
+	os.execute("while read -t1 < /dev/" .. config.spaceprobe_name .. "; do echo \"Got unexpected input $REPLY\"; done") 
+
 	return res
 end
 
