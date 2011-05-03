@@ -1,5 +1,21 @@
 Requirements
+============
 
--- luarocks package manager
+* lua 5.1
+* openssl, ssmtp, wget in path
 
--- Following packages:
+
+Configuration
+=============
+
+* Edit config.lua
+
+
+To Do
+=====
+
+* Make more stable 
+* Consider luasocket 
+* Port to Erlang, discard ideas about running networked software from
+  total barebones environment
+
