@@ -123,10 +123,10 @@ function common_processing(is_open, was_offline)
 	-- send pending tweets
 	while #tweet_queue > 0 do
 		if #tweet_queue > 1 then
-			tweet_queue = { 
+			tweet_queue = {  -- no point spamming out tweets with tons of old redundant crap
 				"Sorry folks, we've had some link issues at the Spaceport. Some MHV probe updates were not sent out in time.",
 				tweet_queue[#tweet_queue]
-			} -- no point spamming out tweets with tons of old redundant crap
+			}
 		end
 
 		log("Tweeting (queue length " .. #tweet_queue .. ")...")
@@ -139,6 +139,12 @@ function common_processing(is_open, was_offline)
 		table.remove(tweet_queue, 1)
 	end
 
+	-- move along, nothing to see here
+	if (not is_open) and (#tweet_queue == 0) and math.random(15778463) == 3 then -- 15778463 seconds per six months
+		table.insert(tweet_queue, "Space Probe here. It gets lonely in this empty space sometimes. Come and keep me company.")
+	end
+	
+	-- check offline status
 	if probe.get_offline() then
 		if not was_offline then
 			log("Probe offline. Waiting for reconnection...")
@@ -148,7 +154,7 @@ function common_processing(is_open, was_offline)
 	end
 
 	-- update LED setting
-	if #email_queue > 0 or #tweet_queue > 0 then
+	if #email_queue > 0 or #tweet_queue > 0 or knob.is_moving() then
 		probe.fast_green_blink()
 	elseif not is_open then
 		probe.leds_off()
@@ -204,6 +210,10 @@ function update_world(msg)
 	log(msg)
 
 	-- email
+	local egg = ""
+	if config.easter_egg_freq and math.random() < config.easter_egg_freq then
+		egg = config.easter_eggs[math.random(#config.easter_eggs)]
+	end
 	table.insert(email_queue, 
 					  smtp.message({
 						  headers = {
@@ -213,7 +223,7 @@ function update_world(msg)
 						  },
 						  body = msg .. 
 							  "\n\nThis message was sent automatically " ..
-							  "by the MHV Space Probe."
+							  "by the MHV Space Probe. " .. egg
 					  }))
 	
 	table.insert(tweet_queue, msg)
