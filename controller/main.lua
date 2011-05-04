@@ -122,6 +122,13 @@ function common_processing(is_open, was_offline)
 
 	-- send pending tweets
 	while #tweet_queue > 0 do
+		if #tweet_queue > 1 then
+			tweet_queue = { 
+				"Sorry folks, we've had some link issues at the Spaceport. Some MHV probe updates were not sent out in time.",
+				tweet_queue[#tweet_queue]
+			} -- no point spamming out tweets with tons of old redundant crap
+		end
+
 		log("Tweeting (queue length " .. #tweet_queue .. ")...")
 		local r, e = update_status(twitter_client, tweet_queue[1])
 		if not r then
