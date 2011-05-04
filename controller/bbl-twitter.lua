@@ -1,9 +1,11 @@
 -- bbl-twitter "Barebones Lua Twitter"
 --
--- An OAuth-enabled Lua twitter client with _no dependencies_ apart from wget.
+-- An OAuth-enabled Lua twitter client with _no dependencies_ 
+-- apart from luasocket, openssl.
+--
 -- For very thin platforms like embedded systems
 --
--- Requirements: wget or curl & openssl binaries
+-- Requirements: luasocket & an installed openssl binaries
 --
 -- Inspired by "shtter" shell twitter client for OpenWRT, by "lostman"
 -- http://lostman-worlds-end.blogspot.com/2010/05/openwrt_22.html
@@ -24,11 +26,10 @@
 --
 -- TODO: make less bodgy. :)
 
+local http = require("socket.http")
 
 -- Configuration elements for twitter client
 twitter_config = {
-	http_get = "wget --timeout=5 -q -O -", -- "curl -s"
-	http_post = "wget --timeout=5 -q -O - --post-data", -- "curl -s --data"	
 	openssl = "openssl",
 }
 
@@ -71,13 +72,21 @@ local function http_get(client, url, args)
  	if not string.find(url, "?") then
 		url = url .. "?" 
 	end
-	local cmd = string.format("%s \"%s%s\"", twitter_config.http_get, url, argdata)
-	return cmd_output(cmd)
+	local b, c = http.request(url .. argdata)
+	if b and (c ~= 200) then
+		return nil, b .. ("Error " .. c)
+	else
+		return b, c
+	end
 end
 
 local function http_post(client, url, postargs)
-	local cmd = string.format("%s \"%s\" \"%s\"", twitter_config.http_post, sign_http_args(client, "POST", url, postargs), url)
-	return cmd_output(cmd)
+	local b, c = http.request(url, sign_http_args(client, "POST", url, postargs))								
+	if b and (c ~= 200) then
+		return nil, b .. ("Error " .. c)
+	else
+		return b, c
+	end
 end
 
 local function generate_nonce()
@@ -101,11 +110,11 @@ end
 
 -- Interact w/ the user to get us an access token & secret for the client, if not supplied
 local function get_access_token(client)
-	local resp= http_get( client, "http://twitter.com/oauth/request_token", get_base_args(client))
-	assert(resp ~= "", "Could not get OAuth request token")
+	r, e = http_get( client, "http://twitter.com/oauth/request_token", get_base_args(client))
+	assert(r, "Could not get OAuth request token: " .. e)
 	
-	local req_token = string.match(resp, "oauth_token=([^&]*)")
-	local req_secret = string.match(resp, "oauth_token_secret=([^&]*)")
+	local req_token = string.match(r, "oauth_token=([^&]*)")
+	local req_secret = string.match(r, "oauth_token_secret=([^&]*)")
 
 	print("Open this URL in your browser and enter back the PIN")
 	print("http://twitter.com/oauth/authorize?oauth_token=" .. req_token)
@@ -115,11 +124,11 @@ local function get_access_token(client)
 	args = get_base_args(client)
 	args.oauth_token=req_token
 	args.oauth_verifier=req_pin
-	resp = http_get( client, "http://twitter.com/oauth/access_token", args)
-	assert(resp ~= "", "Unable to get access token")
+	r, e = http_get( client, "http://twitter.com/oauth/access_token", args)
+	assert(r, "Unable to get access token: " .. e)
 
-	client.token_key = string.match(resp, "oauth_token=([^&]*)")
-	client.token_secret = string.match(resp, "oauth_token_secret=([^&]*)")
+	client.token_key = string.match(r, "oauth_token=([^&]*)")
+	client.token_secret = string.match(r, "oauth_token_secret=([^&]*)")
 	--print("key = " .. client.token_key)
 	--print("secret = " .. client.token_secret)
 	return client
@@ -128,8 +137,7 @@ end
 function update_status(client, tweet)
 	local args = get_base_args(client)
 	args.status = tweet
-	res = http_post(client, "http://api.twitter.com/1/statuses/update.xml", args)
-	return res
+	return http_post(client, "http://api.twitter.com/1/statuses/update.xml", args)
 end
 							  
 

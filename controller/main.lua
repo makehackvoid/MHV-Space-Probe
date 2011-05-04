@@ -123,8 +123,9 @@ function common_processing(is_open, was_offline)
 	-- send pending tweets
 	while #tweet_queue > 0 do
 		log("Tweeting (queue length " .. #tweet_queue .. ")...")
-		if update_status(twitter_client, tweet_queue[1]) == "" then
-			log("Error sending tweet. Will try again shortly.")
+		local r, e = update_status(twitter_client, tweet_queue[1])
+		if not r then
+			log("Error sending tweet: " .. e .. ". Will try again shortly.")
 			break
 		end
 		log("Tweeted")
