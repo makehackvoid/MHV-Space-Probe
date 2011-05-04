@@ -26,9 +26,11 @@ config = {
 	max_twitter_retries = 20,
 
 	-- SMTP details
-	smtp_cmd = "ssmtp -t", -- outgoing email piped to this cmd
 	smtp_from = "MHV Space Probe <space@makehackvoid.com>",
 	smtp_to = "makers@makehackvoid.com",
+	smtp_server ="mail.myhost.com",
+	smtp_user="",
+	smtp_pass="",
 
 	max_email_retries = 20,
 

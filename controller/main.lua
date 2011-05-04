@@ -9,12 +9,18 @@ require "probe"
 require "knob"
 require "bbl-twitter"
 
+local smtp = require("socket.smtp")
+
 twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret, 
 								config.oauth_access_key, config.oauth_access_secret)
 
+-- anything waiting to go out gets pushed onto this list
+email_queue = {}
+tweet_queue = {}
+
 function startup()
 	-- make sure we can see the probe before we start up at all
-	check_probe_connection()
+	common_processing(false)
 
 	-- Determine initial space state (doesn't send any notices during startup)
 	probe.leds_off()
@@ -26,9 +32,6 @@ function startup()
 	if not space_open then starting = "closed" end
 	log("Starting with space " .. starting)
 
-	if space_open then
-		probe.green_glow()
-	end
 
 	-- Kick off with our initial state
 	if space_open then 
@@ -46,7 +49,7 @@ space_opened_at=os.time()
 
 -- State
 function space_is_open()
-	check_probe_connection()
+	common_processing(true)
 	sleep(1)
 
 	local hours_left = (est_closing_time - os.time())/60/60
@@ -65,22 +68,18 @@ function space_is_open()
 	if os.time() > est_closing_time and warnings < 4 then -- est. closing is now
 		log("Due to close now!!!")
 		probe.buzz(15)
-		probe.slow_blue_blink(100)
 		warnings = 4
 	elseif os.time() + 1*60 > est_closing_time and warnings < 3 then -- 1 minute to est. closing
 		log("1 minute to estimated closing...")
 		probe.buzz(10)
-		probe.slow_blue_blink(250)
 		warnings = 3
 	elseif os.time() + 5*60 > est_closing_time and warnings < 2 then -- 5 minutes to est. closing
 		log("5 minutes to estimated closing...")
 		probe.buzz(5)
-		probe.slow_blue_blink(500)
 		warnings = 2
 	elseif os.time() + 30*60 > est_closing_time and warnings < 1 then -- 30 minutes to est. closing
 		log("30 minutes to estimated closing...")
 		probe.buzz(2)
-		probe.slow_blue_blink(1000)
 		warnings = 1
 	end
 
@@ -89,7 +88,7 @@ end
 
 -- State
 function space_is_closed()
-	check_probe_connection()
+	common_processing(false)
 	sleep(1)
 
 	local hours = knob.get_movement()
@@ -102,12 +101,54 @@ function space_is_closed()
 end
 
 
-function check_probe_connection()
-	if probe.get_offline() then
-		log("Probe offline. Waiting for reconnection...")
-		while probe.get_offline() do
-			sleep(1)
+function common_processing(is_open, was_offline)
+	-- send pending emails
+	while #email_queue > 0 do
+		local email = email_queue[1]
+		log("Sending email (queue length " .. #email_queue .. ")...")
+		local r, e =smtp.send{from = config.smtp_from,
+									 rcpt = config.smtp_to, 
+									 user = config.smtp_user,
+									 password = config.smtp_password,
+									 server = config.smtp_server,
+									 source = email }
+		if not r then
+			log("Error sending email: " .. e .. ". Will try again shortly.")
+			break	
 		end
+		log("Email sent")
+		table.remove(email_queue, 1)
+	end
+
+	-- send pending tweets
+	while #tweet_queue > 0 do
+		log("Tweeting (queue length " .. #tweet_queue .. ")...")
+		if update_status(twitter_client, tweet_queue[1]) == "" then
+			log("Error sending tweet. Will try again shortly.")
+			break
+		end
+		log("Tweeted")
+		table.remove(tweet_queue, 1)
+	end
+
+	if probe.get_offline() then
+		if not was_offline then
+			log("Probe offline. Waiting for reconnection...")
+		end
+		sleep(1)
+		return common_processing(is_open, true)
+	end
+
+	-- update LED setting
+	if #email_queue > 0 or #tweet_queue > 0 then
+		probe.fast_green_blink()
+	elseif not is_open then
+		probe.leds_off()
+	elseif warnings == 0 then
+		probe.green_glow()
+	else
+		local lookup = { 1000, 500, 250, 10 } -- blink freq. for different warning levels
+		probe.slow_blue_blink(lookup[warnings])
 	end
 end
 
@@ -126,8 +167,6 @@ function space_closing_in(hours, was_already_open)
 	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
 									  prep, adverb, hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
 	update_world(msg)
-
-	probe.green_glow()
 
 	warnings = 0
 	return space_is_open()
@@ -153,33 +192,23 @@ function space_closing_now()
 end
 
 function update_world(msg)
-	probe.fast_green_blink()
 	msg = string.gsub(msg, "  ", " ")
 	log(msg)
 
 	-- email
-	local email = io.open("/tmp/mhv_email", "w+")
-	email:write("Date: " .. os.date() .. "\n")
-	email:write("From: " .. config.smtp_from .. "\n")
-	email:write("To: " .. config.smtp_to .. "\n")
-	email:write("Subject: " .. msg .. "\n")
-	email:write("\n\nThis message was sent automatically by the MHV Space Probe.\n\n")
-	email:close()
-	os.execute("cat /tmp/mhv_email | " .. config.smtp_cmd .. " &")
-
-	-- twitter
-	local retries = 0
-	while update_status(twitter_client, msg) == "" and retries < config.max_twitter_retries do
-		probe.get_offline() -- keep the probe awake
-		sleep(5)
-		probe.get_offline() -- keep the probe awake
-		retries = retries + 1
-	end
-	if retries == config.max_twitter_retries then
-		log("Failed to tweet... :(")
-	end
-	log("Done communicating message")
-	probe.leds_off()
+	table.insert(email_queue, 
+					  smtp.message({
+						  headers = {
+							  to = config.smtp_to,
+							  from = config.smtp_from,
+							  subject = msg
+						  },
+						  body = msg .. 
+							  "\n\nThis message was sent automatically " ..
+							  "by the MHV Space Probe."
+					  }))
+	
+	table.insert(tweet_queue, msg)
 end
 
 
