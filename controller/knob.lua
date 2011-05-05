@@ -45,7 +45,6 @@ local function knob_handle_still(raw)
 			return nil -- was an ADC blip
 		end
 		knob.state = "MOVING"
-		probe.fast_green_blink() -- on the move so start blinking
 		last_knob_moving_pos = raw
 		last_knob_movetime = os.time()		
 		return nil
@@ -76,7 +75,12 @@ local function knob_handle_moving(raw)
 	return translate(raw, config.knob_table)
 end
 
+local function is_moving()
+	return knob.state == "MOVING"
+end
 
 knob.states = { STILL=knob_handle_still, MOVING=knob_handle_moving }
 
 knob.get_movement = get_knob_movement
+
+knob.is_moving = is_moving
