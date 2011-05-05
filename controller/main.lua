@@ -192,9 +192,9 @@ function space_closing_now()
 
 	local duration = os.time() - space_opened_at
 	if duration < 180 then
-		duration = string.format("%d seconds", duration)
+		duration = string.format("%d seconds", round(duration))
 	elseif duration < 60*180 then
-		duration = string.format("%d minutes", duration/60)
+		duration = string.format("%d minutes", round(duration/60))
 	elseif duration < 60*60*24 then
 		duration = hours_rounded(duration/60/60)
 	else
