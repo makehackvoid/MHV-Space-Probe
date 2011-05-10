@@ -28,8 +28,9 @@ local function flush_input()
 	-- in case we got out of sync
 	-- needs to be new because we're closing it when we're done, it's a smelly hack
 	local tempread = io.open("/dev/" .. config.spaceprobe_name, "r")
-	ttyr:setvbuf("no")
+	tempread:setvbuf("no")
 	local socket = sockets.tcp()
+	log("Flushing input...")
 	socket:connect("*", 0)
 	socket:setfd(posix.fileno(tempread))
 	local readers
@@ -41,19 +42,21 @@ local function flush_input()
 	until #readers == 0
 	tempread:close()
 	socket:close()
+	posix.sleep(1)
 end
 
 
 local function send_command(cmd)
 	--log("Sending command " .. cmd)
 
-	--flush_input(ttyr)
-
+	if not ttyr then
+		flush_input()
+	end
 	if not (ttyr and ttyw) then
 		ttyr = io.open("/dev/" .. config.spaceprobe_name, "r")
-		--ttyr:setvbuf("no")
+		ttyr:setvbuf("no")
 		ttyw = io.open("/dev/" .. config.spaceprobe_name, "w")
-		--ttyw:setvbuf("no")
+		ttyw:setvbuf("no")
 		if not (ttyr and ttyw) then
 			log("Failed to open /dev/" .. config.spaceprobe_name .. ". Not configured?")
 			return nil
