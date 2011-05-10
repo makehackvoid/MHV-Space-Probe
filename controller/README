@@ -2,7 +2,11 @@ Requirements
 ============
 
 * lua 5.1
-* openssl, ssmtp, wget in path
+* openssl binary in path, luasocket, luaposix
+
+** On OpenWRT, packages are openssl-util, lua, luasocket (luaposix included w/ lua on current OpenWRT)
+** On Debian/Ubuntu, packages are openssl, lua, liblua5.1-socket2, liblua5.1-posix1
+** On other OSes, you're on your own. ;)
 
 
 Configuration
@@ -15,7 +19,4 @@ To Do
 =====
 
 * Make more stable 
-* Consider luasocket 
-* Port to Erlang, discard ideas about running networked software from
-  total barebones environment
 

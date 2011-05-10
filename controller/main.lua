@@ -8,6 +8,7 @@ require "utils"
 require "probe"
 require "knob"
 require "bbl-twitter"
+require "posix"
 
 local smtp = require("socket.smtp")
 
@@ -50,7 +51,6 @@ space_opened_at=os.time()
 -- State
 function space_is_open()
 	common_processing(true)
-	sleep(1)
 
 	local hours_left = (est_closing_time - os.time())/60/60
 	probe.set_dial(round(translate(hours_left, config.dial_table)))
@@ -89,7 +89,6 @@ end
 -- State
 function space_is_closed()
 	common_processing(false)
-	sleep(1)
 
 	local hours = knob.get_movement()
 	if hours ~= nil and hours > 0 then
@@ -106,11 +105,12 @@ function common_processing(is_open, was_offline)
 	while #email_queue > 0 do
 		local email = email_queue[1]
 		log("Sending email (queue length " .. #email_queue .. ")...")
-		local r, e =smtp.send{from = config.smtp_from,
+		local r, e =smtp.send{from = string.match(config.smtp_from, "<[^>]*>"),
 									 rcpt = config.smtp_to, 
 									 user = config.smtp_user,
-									 password = config.smtp_password,
+									 password = config.smtp_pass,
 									 server = config.smtp_server,
+									 port = config.smtp_port or 25,
 									 source = email }
 		if not r then
 			log("Error sending email: " .. e .. ". Will try again shortly.")
@@ -143,13 +143,14 @@ function common_processing(is_open, was_offline)
 	if (not is_open) and (#tweet_queue == 0) and math.random(15778463) == 3 then -- 15778463 seconds per six months
 		table.insert(tweet_queue, "Space Probe here. It gets lonely in this empty space sometimes. Come and keep me company.")
 	end
+
+	posix.sleep(1)
 	
 	-- check offline status
 	if probe.get_offline() then
 		if not was_offline then
 			log("Probe offline. Waiting for reconnection...")
 		end
-		sleep(1)
 		return common_processing(is_open, true)
 	end
 

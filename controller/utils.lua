@@ -4,12 +4,6 @@ function log(message)
 	print(os.date() .. " " .. tostring(message))
 end
 
-function sleep(seconds)
-	--next = os.time() + 1
-	--while(os.time() < next) do end
-	os.execute(string.format("sleep %d", seconds))
-end
-
 function round(n)
 	return math.floor(n+0.5)
 end
