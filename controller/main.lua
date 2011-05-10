@@ -77,8 +77,8 @@ function space_is_open()
 		log("5 minutes to estimated closing...")
 		probe.buzz(5)
 		warnings = 2
-	elseif os.time() + 30*60 > est_closing_time and warnings < 1 then -- 30 minutes to est. closing
-		log("30 minutes to estimated closing...")
+	elseif os.time() + 15*60 > est_closing_time and warnings < 1 then -- 15 minutes to est. closing
+		log("15 minutes to estimated closing...")
 		probe.buzz(2)
 		warnings = 1
 	end
