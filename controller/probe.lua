@@ -35,6 +35,7 @@ local function flush_input()
 	local socket = sockets.tcp()
 	log("Flushing input...")
 	socket:connect("*", 0)
+	oldfd = socket:getfd()
 	socket:setfd(posix.fileno(tempread))
 	local readers
 	repeat
@@ -43,8 +44,9 @@ local function flush_input()
 			tempread:read(1)
 		end
 	until #readers == 0
-	tempread:close()
+	socket:setfd(oldfd)
 	socket:close()
+	tempread:close()
 	posix.sleep(1)
 end
 
@@ -111,10 +113,12 @@ local last_position = nil
 
 local function get_position()
 	res = tonumber(send_command("K"))
-	if res >= 1014 then 
+	if res and (res >= 1014) then 
 		return last_position -- our probe has a bug where 0 and 1014 are interchangeable, so ignore any 1014s
 	end
-	last_position = res	
+	if res then
+		last_position = res
+	end
 	return res
 end
 
