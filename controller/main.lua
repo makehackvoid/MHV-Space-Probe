@@ -26,6 +26,9 @@ function startup()
 	-- Determine initial space state (doesn't send any notices during startup)
 	probe.leds_off()
 	local pos = probe.get_position()
+	if pos == nil then
+	  return startup()
+  	end
 	local hours = translate(pos, config.knob_table)
 	log("Initial position " .. pos .. " translates to " .. hours)
 	local space_open = translate(pos, config.knob_table) > 0.25
