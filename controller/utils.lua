@@ -13,8 +13,9 @@ end
 function translate(rawval, lookup_table)
 	low_p = { 0, 0 }
 	high_p = { 100000000, 0 } -- hacky big number here(!)
-	for idx,kv in ipairs(lookup_table) do
+	for idx,kv in ipairs(lookup_table) do -- kv is a table of {rawval, translation} here
 		k = kv[1]
+		if rawval == k then return kv[2] end -- shortcut exact matches (helps with zero)
 		if k < rawval and k > low_p[1] then low_p = kv end
 		if k > rawval and k < high_p[1] then high_p = kv end
 	end
