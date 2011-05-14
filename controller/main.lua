@@ -103,6 +103,7 @@ end
 function common_processing(is_open, was_offline)
 	-- send pending emails
 	while #email_queue > 0 do
+		probe.ping()
 		local email = email_queue[1]
 		log("Sending email (queue length " .. #email_queue .. ")...")
 		local r, e =smtp.send{from = string.match(config.smtp_from, "<[^>]*>"),
@@ -122,6 +123,7 @@ function common_processing(is_open, was_offline)
 
 	-- send pending tweets
 	while #tweet_queue > 0 do
+		probe.ping()
 		if #tweet_queue > 1 then
 			tweet_queue = {  -- no point spamming out tweets with tons of old redundant crap
 				"Sorry folks, we've had some link issues at the Spaceport. Some MHV probe updates were not sent out in time.",

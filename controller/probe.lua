@@ -28,6 +28,9 @@ local function flush_input()
 	-- in case we got out of sync
 	-- needs to be new because we're closing it when we're done, it's a smelly hack
 	local tempread = io.open("/dev/" .. config.spaceprobe_name, "r")
+	if not tempread then
+		return nil
+	end
 	tempread:setvbuf("no")
 	local socket = sockets.tcp()
 	log("Flushing input...")
@@ -54,13 +57,13 @@ local function send_command(cmd)
 	end
 	if not (ttyr and ttyw) then
 		ttyr = io.open("/dev/" .. config.spaceprobe_name, "r")
-		ttyr:setvbuf("no")
 		ttyw = io.open("/dev/" .. config.spaceprobe_name, "w")
-		ttyw:setvbuf("no")
 		if not (ttyr and ttyw) then
 			log("Failed to open /dev/" .. config.spaceprobe_name .. ". Not configured?")
 			return nil
 		end
+		ttyr:setvbuf("no")
+		ttyw:setvbuf("no")
 	end
 
 	ttyw:write(cmd .. "\n")
@@ -104,11 +107,19 @@ local function buzz(seconds)
 	return send_command(string.format("B%04d", seconds*1000))
 end
 
+local last_position = nil
+
 local function get_position()
-	return tonumber(send_command("K"))
+	res = tonumber(send_command("K"))
+	if res >= 1014 then 
+		return last_position -- our probe has a bug where 0 and 1014 are interchangeable, so ignore any 1014s
+	end
+	last_position = res	
+	return res
 end
 
 probe.get_position=get_position
+probe.ping=get_offline
 probe.get_offline=get_offline
 probe.set_dial=set_dial
 probe.set_leds=set_leds
