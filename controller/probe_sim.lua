@@ -33,7 +33,10 @@ local function get_offline()
 end
 
 local function set_dial(raw_value)
-	print("Setting dial to value " .. raw_value)
+	if raw_value ~= last_dial then
+		log("Setting dial to value " .. raw_value)
+		last_dial = raw_value
+	end
 end
 
 local function set_leds(r,g,b,blink_on_time,blink_off_time)
@@ -41,13 +44,20 @@ local function set_leds(r,g,b,blink_on_time,blink_off_time)
 		blink_on_time = 1 -- constant duty
 		blink_off_time = 0
 	end
-	msg = string.format("Setting LEDS %d %d %d w/ blink cycle %d/%dms",
-							  r,g,b,blink_on_time,blink_on_time,blink_on_time+blink_off_time)
-	print(msg)
+	if last_r ~= r or last_g ~= g or last_b ~= b or last_bon ~= blink_on_time or last_boff ~= blink_off_time then
+		msg = string.format("Setting LEDS %d %d %d w/ blink cycle %d/%dms",
+								  r,g,b,blink_on_time,blink_on_time,blink_on_time+blink_off_time)
+		log(msg)
+		last_r = r
+		last_g = g
+		last_b = b
+		last_bon = blink_on_time
+		last_boff = blink_off_time
+	end
 end
 
 local function buzz(seconds)
-	print("Buzzing for " .. seconds .. " seconds")
+	log("Buzzing for " .. seconds .. " seconds")
 end
 
 
@@ -56,3 +66,4 @@ probe.get_offline=get_offline
 probe.set_dial=set_dial
 probe.set_leds=set_leds
 probe.buzz=buzz
+probe.ping=get_offline
