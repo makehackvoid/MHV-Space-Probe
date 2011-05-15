@@ -136,7 +136,7 @@ function common_processing(is_open, was_offline)
 
 		log("Tweeting (queue length " .. #tweet_queue .. ")...")
 		local r, e = update_status(twitter_client, tweet_queue[1])
-		if not r then
+		if (not r) and (not string.match(e, "duplicate")) then
 			log("Error sending tweet: " .. e .. ". Will try again shortly.")
 			break
 		end
