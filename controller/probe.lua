@@ -11,7 +11,7 @@ probe.leds_off = function() probe.set_leds(0,0,0) end
 probe.green_glow = function() probe.set_leds(0,30,0) end
 probe.fast_green_blink = function() probe.set_leds(0,255,0,50,100) end
 probe.fast_red_blink   = function() probe.set_leds(255,0,0,200,200) end
-probe.slow_blue_blink = function(off_time) print(off_time) probe.set_leds(0,0,255,200,off_time) end
+probe.slow_blue_blink = function(off_time) probe.set_leds(0,0,255,200,off_time) end
 
 
 if config.spaceprobe_name == "simulation" then
