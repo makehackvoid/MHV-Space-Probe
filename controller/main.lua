@@ -244,9 +244,9 @@ function hours_rounded(hours)
 	if hours > 6 then 
 		hours = round(hours)
 	elseif hours > 2 then 
-		hours = round(hours * 2) / 2
+		hours = round(hours / 2) * 2
 	else
-		hours = round(hours * 4) / 4
+		hours = round(hours / 4) * 4
 	end
 	local fraction_name = { "", " 1/4", " 1/2", " 3/4" }
 	local whole = math.floor(hours)
