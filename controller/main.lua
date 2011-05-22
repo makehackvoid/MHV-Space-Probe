@@ -19,6 +19,8 @@ twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret,
 email_queue = {}
 tweet_queue = {}
 
+local zero_thresh = 10/60 -- anyone dialing in less than 10 minutes is assumed to have dialed in "0"
+
 function startup()
 	-- make sure we can see the probe before we start up at all
 	common_processing(false)
@@ -31,7 +33,7 @@ function startup()
   	end
 	local hours = translate(pos, config.knob_table)
 	log("Initial position " .. pos .. " translates to " .. hours)
-	local space_open = translate(pos, config.knob_table) > 0.25
+	local space_open = translate(pos, config.knob_table) > zero_thresh
 	local starting = "open"
 	if not space_open then starting = "closed" end
 	log("Starting with space " .. starting)
@@ -59,7 +61,7 @@ function space_is_open()
 	probe.set_dial(round(translate(hours_left, config.dial_table)))
 
 	local hours = knob.get_movement()
-	if hours == 0 then
+	if hours < zero_thresh then
 		-- Space just closed
 		space_closing_now()
 		return space_is_closed()
@@ -94,7 +96,7 @@ function space_is_closed()
 	common_processing(false)
 
 	local hours = knob.get_movement()
-	if hours ~= nil and hours > 0 then
+	if hours ~= nil and hours > zero_thresh then
 		-- Space just opened
 		space_closing_in(hours, false)
 		return space_is_open()
