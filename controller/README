@@ -1,8 +1,25 @@
+What This Is
+============
+
+Controller program for the MHV Space Probe. Is designed to run in Lua
+under Linux and talk to the probe via Bluetooth RFCOMM, configured as a
+device /dev/rfcommX.
+
+The controller also supports a simulation mode (set in config.lua) 
+whereby the probe reads its raw position from /tmp/space_probe_knob
+and interacts with the user via stdout. See probe_sim.lua for details.
+
+You can run the controller as 'lua main.lua' or you can run it in an
+infinite loop as spaceprobe-loop.sh
+
 Requirements
 ============
 
+Designed to be as few as possible, and compatible w/ OpenWRT standard distribution.
+
 * lua 5.1
-* openssl binary in path, luasocket, luaposix
+* Libraries: luasocket, luaposix
+* Binary executable: openssl (assumed to be on the path!)
 
 ** On OpenWRT, packages are openssl-util, lua, luasocket (luaposix included w/ lua on current OpenWRT)
 ** On Debian/Ubuntu, packages are openssl, lua, liblua5.1-socket2, liblua5.1-posix1
@@ -12,11 +29,7 @@ Requirements
 Configuration
 =============
 
-* Edit config.lua
+* Copy config.lua.tmpl to config.lua and edit to provide relevant
+  credentials, details, calibrations
 
-
-To Do
-=====
-
-* Make more stable 
 

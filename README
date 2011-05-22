@@ -1,0 +1,10 @@
+This is the software for the Make, Hack, Void Space Probe
+
+Full details at http://www.makehackvoid.com/projects/space-probe/
+
+* controller/ contains the Lua program, designed to run under Linux and
+  talk to the probe itself. There is a separate (more detailed) README
+  file in this directory.
+
+* probe_firmware/Space_Probe/ contains the Arduino sketch which is
+  designed to run on the probe itself.
