@@ -19,7 +19,7 @@ Designed to be as few as possible, and compatible w/ OpenWRT standard distributi
 
 * lua 5.1
 * Libraries: luasocket, luaposix
-* Binary executable: openssl (assumed to be on the path!)
+* Executables: openssl executable (assumed to be on the path by default)
 
 ** On OpenWRT, packages are openssl-util, lua, luasocket (luaposix included w/ lua on current OpenWRT)
 ** On Debian/Ubuntu, packages are openssl, lua, liblua5.1-socket2, liblua5.1-posix1

@@ -5,7 +5,8 @@
 --
 -- For very thin platforms like embedded systems
 --
--- Requirements: luasocket & an installed openssl binaries
+-- Requirements: luasocket, shell w/ echo support (ie most any shell) & openssl 
+-- (on the path, or with path set at twitter_config.openssl property.)
 --
 -- Inspired by "shtter" shell twitter client for OpenWRT, by "lostman"
 -- http://lostman-worlds-end.blogspot.com/2010/05/openwrt_22.html
@@ -50,9 +51,10 @@ end
 
 local function sign_http_args(client, method, url, args)
 	local query = string.format("%s&%s&%s", method, url_encode(url), url_encode(join_http_args(args)))		
-	local cmd = string.format("echo -n \"%s\" | %s sha1 -hmac \"%s&%s\" -binary | openssl base64", 
+	local cmd = string.format("echo -n \"%s\" | %s sha1 -hmac \"%s&%s\" -binary | %s base64", 
 				 						 query, twitter_config.openssl, 
-										 client.consumer_secret, client.token_secret or "")
+										 client.consumer_secret, client.token_secret or "",
+										 twitter_config.openssl)
 	local hash = cmd_output(cmd)
 	hash = string.gsub(hash, "\n", "")
 	return join_http_args(args) .. "&oauth_signature=" .. url_encode(hash)
