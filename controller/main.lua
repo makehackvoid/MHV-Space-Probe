@@ -238,23 +238,5 @@ function update_world(msg)
 end
 
 
--- Return number of hours, rounded to nearest 1/4 hour, as string
-function hours_rounded(hours)
-	-- precision needed depends on how far away closing time is
-	if hours > 6 then 
-		hours = round(hours)
-	elseif hours > 2 then 
-		hours = round(hours / 2) * 2
-	else
-		hours = round(hours / 4) * 4
-	end
-	local fraction_name = { "", " 1/4", " 1/2", " 3/4" }
-	local whole = math.floor(hours)
-	if whole == 0 and hours > 0.125 then whole = "" end
-	local suffix = "s"
-	if hours <= 1 then suffix = "" end
-	return string.format("%s%s hour%s", whole, fraction_name[((hours % 1)*4)+1], suffix)
-end
-
 
 return startup()

@@ -29,3 +29,46 @@ function translate(rawval, lookup_table)
 	if not finite(res) then res = 0 end
 	return res
 end
+
+-- Return s if a pluralised number, nothing otherwise
+local function plural(number)
+	return (number == 1 and "") or "s"
+end
+
+-- Return number of hours, rounded to nearest 1/4 hour, as string
+function hours_rounded(hours)
+	-- precision needed depends on how far away closing time is
+	if hours > 6 then 
+		return string.format("%s hours", round(hours))
+	elseif hours > 2 then
+			halves = round(hours * 2)
+			local lookup = { 
+				[4] = "two hours",
+				[5] = "2 1/2 hours",
+				[6] = "three hours",
+				[7] = "3 1/2 hours",
+				[8] = "four hours",
+				[9] = "4 1/2 hours",
+				[10] = "five hours",
+				[11] = "5 1/2 hours",
+				[12] = "six hours"
+			}
+			return lookup[halves]
+	elseif hours > 0.25 then
+		quarters = round(hours * 4)
+		local lookup = {
+			[1] =  "fifteen minutes",
+			[2] =  "half an hour",
+			[3] =  "3/4 of an hour",
+			[4] =  "an hour",
+			[5] =  "1 1/4 hours",
+			[6] =  "90 minutes",
+			[7] =  "1 3/4 hours",
+			[8] =  "two hours"
+		}
+		return lookup[quarters]
+	else
+		minutes = round(hours*60)
+		return string.format("%s minute%s", minutes, plural(minutes))
+	end
+end
