@@ -61,7 +61,7 @@ function space_is_open()
 	probe.set_dial(round(translate(hours_left, config.dial_table)))
 
 	local hours = knob.get_movement()
-	if hours < zero_thresh then
+	if hours and hours < zero_thresh then
 		-- Space just closed
 		space_closing_now()
 		return space_is_closed()
@@ -96,7 +96,7 @@ function space_is_closed()
 	common_processing(false)
 
 	local hours = knob.get_movement()
-	if hours ~= nil and hours > zero_thresh then
+	if hours and hours > zero_thresh then
 		-- Space just opened
 		space_closing_in(hours, false)
 		return space_is_open()
