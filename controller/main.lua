@@ -7,7 +7,7 @@ require "config"
 require "utils"
 require "probe"
 require "knob"
-require "bbl-twitter"
+require "bbl-twitter/bbl-twitter"
 require "posix"
 
 local smtp = require("socket.smtp")

@@ -1,0 +1,3 @@
+[submodule "controller/bbl-twitter"]
+	path = controller/bbl-twitter
+	url = git://github.com/projectgus/bbl-twitter.git
