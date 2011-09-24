@@ -73,7 +73,7 @@ local function send_command(cmd)
 
 	local timeout = os.time() + 5 -- 5 second timeout
 	local res
-	while res==nil and os.time() < timeout do
+	while (res==nil or res=="") and os.time() < timeout do
 		res=ttyr:read("*line")
 		ttyr:flush()
 	end
