@@ -23,6 +23,9 @@ config = {
         -- In hours, if the space is open this long after estimated closing time then silently assume it closed
         max_overstay = 8,
 
+        -- When space is already open, a new longer estimate has to change the total estimated opening time
+        -- by at least this much in order to trigger a message
+        overstay_silent_ratio = 0.2,
 
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",

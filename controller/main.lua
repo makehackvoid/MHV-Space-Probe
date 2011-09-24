@@ -19,6 +19,8 @@ twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret,
 email_queue = {}
 tweet_queue = {}
 
+est_closing_time = 0
+
 local zero_thresh = 10/60 -- anyone dialing in less than 10 minutes is assumed to have dialed in "0"
 
 function startup()
@@ -193,6 +195,7 @@ end
 
 -- Space just opened, or opening hours changed
 function space_closing_in(hours, was_already_open)
+        old_est_closing = est_closing_time
 	est_closing_time = os.time() + hours*60*60	
 	log("Estimated closing " .. os.date(nil, est_closing_time))
 
@@ -204,7 +207,20 @@ function space_closing_in(hours, was_already_open)
 	local adverb = was_already_open and "another" or "" 
 	local est_closing_rounded = round(est_closing_time /60/15) *60*15 -- round to 15 minute interval
 	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
-									  prep, adverb, hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
+				  prep, adverb, 
+				  hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
+
+	if was_already_open then
+	   old_duration_estimate = old_est_closing - space_opened_at -- how long we thought we'd be open for
+	   new_duration_estimate = est_closing_time - space_opened_at -- how long we now think
+	   if new_duration_estimate > old_duration_estimate 
+	      and new_duration_estimate < old_duration_estimate * (config.overstay_silent_ratio + 1) then
+	      log("Skipping stay-open message, is only staying additional " 
+		  .. (est_closing_time - old_est_closing)/60/60 .. " hours")
+	      warnings = 0
+	      return space_is_open()	   
+	   end
+	end
 	update_world(msg)
 
 	warnings = 0
