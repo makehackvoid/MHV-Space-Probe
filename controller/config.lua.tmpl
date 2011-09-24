@@ -20,6 +20,10 @@ config = {
 	-- Silent mode - don't tweet or email if this is on
 	silent_mode = false,
 
+        -- In hours, if the space is open this long after estimated closing time then silently assume it closed
+        max_overstay = 8,
+
+
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",
 	oauth_consumer_secret = "",

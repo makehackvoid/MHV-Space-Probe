@@ -63,11 +63,14 @@ function space_is_open()
 	local hours = knob.get_movement()
 	if hours and hours < zero_thresh then
 		-- Space just closed
-		space_closing_now()
-		return space_is_closed()
+		return space_closing_now()
 	elseif hours ~= nil then
 		-- Dial moved to a different non-zero number
 		space_closing_in(hours, true)
+	elseif hours_left < -1 * config.max_overstay then
+	        -- Assume closed, quierly
+	   log("Have been open for " .. config.max_overstay .. " hours since estimated closing. Assuming closed.")
+	   return space_is_closed()
 	end
 	
 	if os.time() > est_closing_time and warnings < 4 then -- est. closing is now
