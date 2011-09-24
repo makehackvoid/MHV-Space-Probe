@@ -104,47 +104,61 @@ function space_is_closed()
 	return space_is_closed()
 end
 
+local function send_pending_emails()
+   while #email_queue > 0 do
+      if config.silent_mode then
+	 log("Silent mode is on, dropping " .. #email_queue .. " emails")
+	 email_queue = {}
+	 return
+      end
+      probe.ping()
+      local email = email_queue[1]
+      log("Sending email (queue length " .. #email_queue .. ")...")
+      local r, e =smtp.send{from = string.match(config.smtp_from, "<[^>]*>"),
+			    rcpt = config.smtp_to, 
+			    user = config.smtp_user,
+			    password = config.smtp_pass,
+			    server = config.smtp_server,
+			    port = config.smtp_port or 25,
+			    source = email }
+      if not r then
+	 log("Error sending email: " .. e .. ". Will try again shortly.")
+	 break	
+      end
+      log("Email sent")
+      table.remove(email_queue, 1)
+   end
+end
+
+local function send_pending_tweets()
+   while #tweet_queue > 0 do
+      if config.silent_mode then      
+	 log("Silent mode is on, dropping " .. #tweet_queue .. " tweets")
+	 tweet_queue = {}
+	 return
+      end
+      probe.ping()
+      if #tweet_queue > 1 then
+	 tweet_queue = {  -- no point spamming out tweets with tons of old redundant crap, just a note and the latest
+	    "Sorry folks, we've had some link issues at the Spaceport. Some MHV probe updates were not sent out in time.",
+	    tweet_queue[#tweet_queue]
+	 }
+      end
+      
+      log("Tweeting (queue length " .. #tweet_queue .. ")...")
+      local r, e = update_status(twitter_client, tweet_queue[1])
+      if (not r) and (not string.match(e, "duplicate")) then
+	 log("Error sending tweet: " .. e .. ". Will try again shortly.")
+	 break
+      end
+      log("Tweeted")
+      table.remove(tweet_queue, 1)
+   end
+end
 
 function common_processing(is_open, was_offline)
-	-- send pending emails
-	while #email_queue > 0 do
-		probe.ping()
-		local email = email_queue[1]
-		log("Sending email (queue length " .. #email_queue .. ")...")
-		local r, e =smtp.send{from = string.match(config.smtp_from, "<[^>]*>"),
-									 rcpt = config.smtp_to, 
-									 user = config.smtp_user,
-									 password = config.smtp_pass,
-									 server = config.smtp_server,
-									 port = config.smtp_port or 25,
-									 source = email }
-		if not r then
-			log("Error sending email: " .. e .. ". Will try again shortly.")
-			break	
-		end
-		log("Email sent")
-		table.remove(email_queue, 1)
-	end
-
-	-- send pending tweets
-	while #tweet_queue > 0 do
-		probe.ping()
-		if #tweet_queue > 1 then
-			tweet_queue = {  -- no point spamming out tweets with tons of old redundant crap
-				"Sorry folks, we've had some link issues at the Spaceport. Some MHV probe updates were not sent out in time.",
-				tweet_queue[#tweet_queue]
-			}
-		end
-
-		log("Tweeting (queue length " .. #tweet_queue .. ")...")
-		local r, e = update_status(twitter_client, tweet_queue[1])
-		if (not r) and (not string.match(e, "duplicate")) then
-			log("Error sending tweet: " .. e .. ". Will try again shortly.")
-			break
-		end
-		log("Tweeted")
-		table.remove(tweet_queue, 1)
-	end
+       send_pending_emails()
+       send_pending_tweets()
 
 	-- move along, nothing to see here
 	if (not is_open) and (#tweet_queue == 0) and math.random(15778463) == 3 then -- 15778463 seconds per six months

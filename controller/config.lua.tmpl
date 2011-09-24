@@ -14,8 +14,11 @@ config = {
 	knob_latency = 2,
 
 	-- Knob has to move by this much (in raw values, scale 0-1023)
-	-- to be considered a new value
+	-- to be considered a new value (Note that knob value is already smoothed on Arduino side)
 	knob_deadband = 15,
+
+	-- Silent mode - don't tweet or email if this is on
+	silent_mode = false,
 
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",
