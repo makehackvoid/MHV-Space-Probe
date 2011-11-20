@@ -112,15 +112,15 @@ end
 local function send_pending_emails()
    while #email_queue > 0 do
       if config.silent_mode then
-	 log("Silent mode is on, dropping " .. #email_queue .. " emails")
-	 email_queue = {}
-	 return
+			log("Silent mode is on, dropping " .. #email_queue .. " emails")
+			email_queue = {}
+			return
       end
       probe.ping()
       local email = email_queue[1]
       log("Sending email (queue length " .. #email_queue .. ")...")
       local r, e =smtp.send{from = string.match(config.smtp_from, "<[^>]*>"),
-			    rcpt = config.smtp_to, 
+			    rcpt = config.smtp_to,
 			    user = config.smtp_user,
 			    password = config.smtp_pass,
 			    server = config.smtp_server,
@@ -128,7 +128,7 @@ local function send_pending_emails()
 			    source = email }
       if not r then
 	 log("Error sending email: " .. e .. ". Will try again shortly.")
-	 break	
+	 break
       end
       log("Email sent")
       table.remove(email_queue, 1)
@@ -138,9 +138,9 @@ end
 local function send_pending_tweets()
    while #tweet_queue > 0 do
       if config.silent_mode then      
-	 log("Silent mode is on, dropping " .. #tweet_queue .. " tweets")
-	 tweet_queue = {}
-	 return
+			log("Silent mode is on, dropping " .. #tweet_queue .. " tweets")
+			tweet_queue = {}
+			return
       end
       probe.ping()
       if #tweet_queue > 1 then
