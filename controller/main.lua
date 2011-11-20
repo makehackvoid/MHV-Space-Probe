@@ -203,12 +203,10 @@ function space_closing_in(hours, was_already_open)
 		space_opened_at = os.time()
 	end
 	probe.set_dial(round(translate(hours, config.dial_table)))
-	local prep = was_already_open and "will remain" or "is now"
-	local adverb = was_already_open and "another" or "" 
+	local prep = was_already_open and "staying" or "is"
 	local est_closing_rounded = round(est_closing_time /60/15) *60*15 -- round to 15 minute interval
-	local msg = string.format("The MHV space %s open for approximately %s %s (~%s)", 
-				  prep, adverb, 
-				  hours_rounded(hours), os.date("%H:%M",est_closing_rounded))
+	local msg = string.format("Space %s open until %s (estimate)",
+									  prep, os.date("%H:%M",est_closing_rounded))
 
 	if was_already_open then
 	   old_duration_estimate = old_est_closing - space_opened_at -- how long we thought we'd be open for
@@ -221,7 +219,7 @@ function space_closing_in(hours, was_already_open)
 	      return space_is_open()	   
 	   end
 	end
-	update_world(msg)
+	update_world(msg, not was_already_open)
 
 	warnings = 0
 	return space_is_open()
@@ -242,11 +240,11 @@ function space_closing_now()
 		duration = string.format("%.1f days", duration/60/60/24)
 	end
 	-- appending the duration open is necessary to stop twitter dropping duplicate tweets!
-	update_world("The MHV space is now closed (was open " .. duration .. ")")
+	update_world("Space is closed (was open " .. duration .. ")")
 	return space_is_closed()
 end
 
-function update_world(msg)
+function update_world(msg, is_fresh_opening)
 	msg = string.gsub(msg, "  ", " ")
 	log(msg)
 
@@ -255,19 +253,18 @@ function update_world(msg)
 	if config.easter_egg_freq and math.random() < config.easter_egg_freq then
 		egg = config.easter_eggs[math.random(#config.easter_eggs)]
 	end
-	table.insert(email_queue, 
-					  smtp.message({
-						  headers = {
-							  to = config.smtp_to,
-							  from = config.smtp_from,
-							  subject = msg
-						  },
-						  body = msg .. 
-							  "\n\nThis message was sent automatically " ..
-							  "by the MHV Space Probe. " .. egg
-					  }))
-	
 	table.insert(tweet_queue, msg)
+	if is_fresh_opening then
+		table.insert(email_queue,
+						 smtp.message({
+											  headers = {
+												  to = config.smtp_to,
+												  from = config.smtp_from,
+												  subject = msg
+											  },
+											  body = msg .. "\n\n" .. config.email_suffix .. "\n\n" .. egg
+										  }))
+	end
 end
 
 

@@ -17,6 +17,12 @@ config = {
 	-- to be considered a new value (Note that knob value is already smoothed on Arduino side)
 	knob_deadband = 15,
 
+	-- Append  this text to the email body
+	email_suffix ="How do you know if the space is really still open? Visit http://twitter.com/makehackvoid and check for further updates, " ..
+					  "or call the space on (02) 6112 6880." ..
+					  "\n\n" ..
+		           "This message was sent automatically by the MHV Space Probe.",
+
 	-- Silent mode - don't tweet or email if this is on
 	silent_mode = false,
 
