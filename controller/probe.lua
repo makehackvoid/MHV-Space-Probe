@@ -10,7 +10,7 @@ probe = {}
 probe.leds_off = function() probe.set_leds(0,0,0) end
 probe.green_glow = function() probe.set_leds(0,30,0) end
 probe.fast_green_blink = function() probe.set_leds(0,255,0,50,100) end
-probe.fast_red_blink   = function() probe.set_leds(255,0,0,200,200) end
+probe.fast_red_blink = function() probe.set_leds(255,0,0,200,200) end
 probe.slow_blue_blink = function(off_time) probe.set_leds(0,0,255,200,off_time) end
 
 
@@ -23,40 +23,9 @@ end
 -- real probe functions follow
 
 
-local function flush_input()
-	-- make a fake socket wrapper around a new file ref to read from, so we can see if there is dud data left in it
-	-- in case we got out of sync
-	-- needs to be new because we're closing it when we're done, it's a smelly hack
-	local tempread = io.open("/dev/" .. config.spaceprobe_name, "r")
-	if not tempread then
-		return nil
-	end
-	tempread:setvbuf("no")
-	local socket = sockets.tcp()
-	log("Flushing input...")
-	socket:connect("*", 0)
-	oldfd = socket:getfd()
-	socket:setfd(posix.fileno(tempread))
-	local readers
-	repeat
-		readers = sockets.select({socket}, {}, 0.001) -- can't be zero to poll!
-		if #readers > 0 then
-			tempread:read(1)
-		end
-	until #readers == 0
-	socket:setfd(oldfd)
-	socket:close()
-	tempread:close()
-	posix.sleep(1)
-end
-
-
 local function send_command(cmd)
 	--log("Sending command " .. cmd)
 
-	if not ttyr then
-		flush_input()
-	end
 	if not (ttyr and ttyw) then
 		ttyr = io.open("/dev/" .. config.spaceprobe_name, "r")
 		ttyw = io.open("/dev/" .. config.spaceprobe_name, "w")
@@ -66,15 +35,19 @@ local function send_command(cmd)
 		end
 		ttyr:setvbuf("no")
 		ttyw:setvbuf("no")
+
+		-- flush any pending data that was left over in a buffer
+		while posix.rpoll(ttyr,0) == 1 do
+			ttyr:read(1)
+		end
 	end
 
 	ttyw:write(cmd .. "\n")
 	ttyw:flush()
 
-	local timeout = os.time() + 5 -- 5 second timeout
-	local res
-	while (res==nil or res=="") and os.time() < timeout do
-		res=ttyr:read("*line")
+	local res = nil
+	if posix.rpoll(ttyr,2000) == 1 then -- 2 second response timeout
+		res = ttyr:read("*line")
 		ttyr:flush()
 	end
 
