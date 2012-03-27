@@ -43,15 +43,15 @@ function startup()
 	update_api(starting)
 
 	-- Kick off with our initial state
-	if space_open then 
+	if space_open then
 		est_closing_time = os.time() + hours*60*60
 		log("Estimated closing " .. os.date(nil, est_closing_time))
-		return space_is_open() 
-	else 
-		return space_is_closed() 
+		return space_is_open()
+	else
+		return space_is_closed()
 	end
 end
-	  
+
 warnings = 0
 
 space_opened_at=os.time()
@@ -75,7 +75,7 @@ function space_is_open()
 	   log("Have been open for " .. config.max_overstay .. " hours since estimated closing. Assuming closed.")
 	   return space_is_closed()
 	end
-	
+
 	if os.time() > est_closing_time and warnings < 4 then -- est. closing is now
 		log("Due to close now!!!")
 		probe.buzz(15)
@@ -138,7 +138,7 @@ end
 
 local function send_pending_tweets()
    while #tweet_queue > 0 do
-      if config.silent_mode then      
+      if config.silent_mode then
 			log("Silent mode is on, dropping " .. #tweet_queue .. " tweets")
 			tweet_queue = {}
 			return
@@ -150,7 +150,7 @@ local function send_pending_tweets()
 	    tweet_queue[#tweet_queue]
 	 }
       end
-      
+
       log("Tweeting (queue length " .. #tweet_queue .. ")...")
       local r, e = update_status(twitter_client, tweet_queue[1])
       if (not r) and (not string.match(e, "duplicate")) then
@@ -172,7 +172,7 @@ function common_processing(is_open, was_offline)
 	end
 
 	posix.sleep(1)
-	
+
 	-- check offline status
 	if probe.get_offline() then
 		if not was_offline then
