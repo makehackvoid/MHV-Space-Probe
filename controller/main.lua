@@ -40,6 +40,7 @@ function startup()
 	if not space_open then starting = "closed" end
 	log("Starting with space " .. starting)
 
+	update_api(starting)
 
 	-- Kick off with our initial state
 	if space_open then 
@@ -201,6 +202,7 @@ function space_closing_in(hours, was_already_open)
 
 	if not was_already_open then
 		space_opened_at = os.time()
+		update_api(true)
 	end
 	probe.set_dial(round(translate(hours, config.dial_table)))
 	local prep = was_already_open and "staying" or "is"
@@ -239,6 +241,7 @@ function space_closing_now()
 	else
 		duration = string.format("%.1f days", duration/60/60/24)
 	end
+	update_api(false)
 	-- appending the duration open is necessary to stop twitter dropping duplicate tweets!
 	update_world("Space is closed (was open " .. duration .. ")")
 	return space_is_closed()
@@ -267,6 +270,23 @@ function update_world(msg, is_fresh_opening)
 	end
 end
 
+function update_api(open)
+	local tmpl = io.open("api.template","r"):read("*all")
+	if open then
+		status = config.api.open_status
+	else
+		status = config.api.closed_status
+	end
+	if open then -- JSONify boolean
+		open = "true"
+	else
+		open = "false"
+	end
+	local tmpl = tmpl:gsub("{{status}}", status):gsub("{{lastchange}}", os.time()):gsub("{{open}}", open)
+	local out = io.open(config.api.path, "w")
+	out:write(tmpl)
+	out:close()
+end
 
 
 return startup()

@@ -33,6 +33,13 @@ config = {
         -- by at least this much in order to trigger a message
         overstay_silent_ratio = 0.2,
 
+	-- Path to write updated api data to when things change
+	api = {
+		path = "api.json",
+		open_status = "The MHV space is open, come and hack!",
+		closed_status = "The MHV space is closed, sorry!",
+	},
+
 	-- Target twitter OAuth credentials
 	oauth_consumer_key = "",
 	oauth_consumer_secret = "",

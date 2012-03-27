@@ -1,0 +1,17 @@
+{
+   "status":"{{status}}",
+   "space":"Make, Hack, Void Canberra",
+   "url":"http://www.makehackvoid.com",
+   "lon":-35.244511,
+   "api":"0.12",
+   "lastchange":{{lastchange}},
+   "contact":{
+      "ml":"http://www.makehackvoid.com/community/mailing-lists",
+      "twitter":"@MakeHackVoid",
+      "irc":"irc://irc.freenode.net/#makehackvoid",
+      "email":"makers@makehackvoid.com"
+   },
+   "address":"Downer Business Park, Frencham St, Downer, ACT 2612",
+   "lat":149.145911,
+   "open":{{open}}
+}
