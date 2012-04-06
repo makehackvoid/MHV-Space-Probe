@@ -40,7 +40,7 @@ function startup()
 	if not space_open then starting = "closed" end
 	log("Starting with space " .. starting)
 
-	update_api(starting)
+	update_api(space_open)
 
 	-- Kick off with our initial state
 	if space_open then
