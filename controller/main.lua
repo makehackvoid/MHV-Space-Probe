@@ -10,7 +10,29 @@ require "knob"
 require "bbl-twitter/bbl-twitter"
 require "posix"
 
+
+function mqtt_callback(topic,message)
+    -- nothing to do here yet
+end
+
 local smtp = require("socket.smtp")
+local MQTT = require("mqtt_library")
+
+mqtt_client = MQTT.client.create("localhost","1883",mqtt_callback)
+
+function mqtt_connect()
+    for tries=0,5,1 do
+        if( mqtt_client.connected ) then
+            break
+        end
+        mqtt_client:connect("MHV-Space-Probe")
+        if( not mqtt_client.connected ) then
+            posix.sleep( 1 )
+        end
+
+    end
+end
+mqtt_connect()
 
 twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret, 
 								config.oauth_access_key, config.oauth_access_secret)
@@ -18,6 +40,9 @@ twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret,
 -- anything waiting to go out gets pushed onto this list
 email_queue = {}
 tweet_queue = {}
+mqtt_queue = {}
+
+table.insert(mqtt_queue, "MHV-Space-Probe")
 
 est_closing_time = 0
 
@@ -162,9 +187,23 @@ local function send_pending_tweets()
    end
 end
 
+local function send_pending_mqtt()
+    while #mqtt_queue > 0 do
+        log("Sending mqtt messages (queue length " .. #mqtt_queue .. ")...")
+        mqtt_connect()
+        if( pcall(function() mqtt_client:publish("announce",mqtt_queue[1]) end) ) then
+            table.remove(mqtt_queue,1)
+        else
+            log("Sending mqtt message failed. trying again later")
+        end
+
+    end
+end
+
 function common_processing(is_open, was_offline)
        send_pending_emails()
        send_pending_tweets()
+       send_pending_mqtt()
 
 	-- move along, nothing to see here
 	if (not is_open) and (#tweet_queue == 0) and math.random(15778463) == 3 then -- 15778463 seconds per six months
@@ -203,6 +242,7 @@ function space_closing_in(hours, was_already_open)
 	if not was_already_open then
 		space_opened_at = os.time()
 		update_api(true)
+        table.insert(mqtt_queue,"space-open")
 	end
 	probe.set_dial(round(translate(hours, config.dial_table)))
 	local prep = was_already_open and "staying" or "is"
@@ -244,6 +284,7 @@ function space_closing_now()
 	update_api(false)
 	-- appending the duration open is necessary to stop twitter dropping duplicate tweets!
 	update_world("Space is closed (was open " .. duration .. ")")
+	table.insert(mqtt_queue, "space-closed")
 	return space_is_closed()
 end
 
