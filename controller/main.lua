@@ -201,6 +201,7 @@ local function send_pending_mqtt()
 end
 
 function common_processing(is_open, was_offline)
+       mqtt_client:handler()
        send_pending_emails()
        send_pending_tweets()
        send_pending_mqtt()
