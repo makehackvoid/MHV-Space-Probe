@@ -41,7 +41,11 @@
  * for 5 seconds it'll start blinking the red LED quickly until it sees a response.
  */
 
-#include <SoftwareSerial.h>
+#include <Ethernet.h>
+#include <Flash.h>
+#include <SD.h>
+#include <TinyWebServer.h>
+#include <EthernetDHCP.h>
 
 const int PANEL_PIN = 6;
 const int RED_PIN = 11;
@@ -58,8 +62,6 @@ const long BEEP_US = 1000000/BEEP_HZ;
 
 const int CMD_TIMEOUT_MS = 20000;
 
-SoftwareSerial btSerial(BT_RX, BT_TX);
-
 int red = 255, green = 0, blue =0;
 long stop_beep_ms = 0;
 long last_cmd_ms = 0;
@@ -70,8 +72,31 @@ const int KNOB_SAMPLES=10;
 
 long last_ms = 0;
 
+boolean help_handler(TinyWebServer& web_server);
+boolean knob_handler(TinyWebServer& web_server);
+boolean set_leds_handler(TinyWebServer& web_server);
+boolean set_gauge_handler(TinyWebServer& web_server);
+boolean beep_handler(TinyWebServer& web_server);
+
+TinyWebServer::PathHandler handlers[] = {
+  // Register the index_handler for GET requests on /
+  {"/", TinyWebServer::GET, &help_handler },
+  {"/knob", TinyWebServer::GET, &knob_handler },
+  {"/leds", TinyWebServer::POST, &set_leds_handler },
+  {"/gauge", TinyWebServer::POST, &set_gauge_handler },
+  {"/beep", TinyWebServer::POST, &beep_handler },
+  {NULL}, // The array has to be NULL terminated this way
+};
+
+TinyWebServer web = TinyWebServer(handlers, NULL);
+
+static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xAE, 0xDF, 0xAB };
+
 void setup()
 {
+  EthernetDHCP.begin(mac);
+  web.begin();
+
   pinMode(PANEL_PIN, OUTPUT);
   pinMode(RED_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
@@ -82,16 +107,14 @@ void setup()
   digitalWrite(GREEN_PIN, LOW);
   digitalWrite(BLUE_PIN, LOW);
   Serial.begin(115200);
-  btSerial.begin(9600);
 }
-
-void check_cmd(long ms);
-void process_cmd();
 
 void loop()
 {
+  web.process();
+  EthernetDHCP.maintain();
+
   long ms = millis();
-  check_cmd(ms);
 
   knob_pos = ((((long)knob_pos) * (KNOB_SAMPLES-1)) + analogRead(KNOB_PIN)) / KNOB_SAMPLES; // rolling avg
 
@@ -114,72 +137,65 @@ void loop()
                         && ( (micros() & BEEP_US) < BEEP_US/2) );
 }
 
-
-const int cmd_buf_len = 32;
-char cmd_buf[cmd_buf_len] = {0};
-
-void check_cmd(long ms)
+boolean help_handler(TinyWebServer& web_server)
 {
-   if(!btSerial.available())
-     return;
-   char c = btSerial.read();
-   if(c == '\n' || c == '\r') {
-     process_cmd();
-     last_cmd_ms = ms;
-   }
-   else {
-     if(strlen(cmd_buf) == cmd_buf_len-1) {
-        Serial.println("Filled buffer w/o end of command - discarding garbage");
-        Serial.println(cmd_buf);
-        memset(cmd_buf, 0, cmd_buf_len);
-        cmd_buf[0] = c;
-        return;
-     }
-     cmd_buf[strlen(cmd_buf)] = c;
-   }
+  web_server.send_error_code(200);
+  web_server.send_content_type("text/html");
+  web_server.end_headers();
+  web_server << F("<html><body><h1>Space Probe Has A Web Thingy</h1><ul>")
+             << F("<li>GET /knob -> read knob position</li>")
+             << F("<li>POST /leds -> set LEDs, postdata has keys R,G,B,on_duty,off_duty</li>")
+             << F("<li>POST /gauge -> set Gauge position, postdata is number</li>")
+             << F("<li>POST /beep -> Beep, postdata is length</li>")
+             << F("</ul></body></html>\n");
+  last_cmd_ms = millis();
+  return true;
 }
 
-void process_cmd()
+boolean knob_handler(TinyWebServer& web_server)
 {
-  Serial.print("Processing command ");
-  Serial.println(cmd_buf);
-  int arg;
-  switch(cmd_buf[0]) {
-     case 'L': // set LEDs
-       sscanf(&cmd_buf[1], "%04d,%04d,%04d,%04d,%04d", &red, &green, &blue, &on_duty, &off_duty);
-       Serial.println("Got new LED settings");
-       btSerial.println("OK");
-       break;
+  web_server.send_error_code(200);
+  web_server.end_headers();
+  web_server << knob_pos << "\n";
+  last_cmd_ms = millis();
+  return true;
+}
 
-     case 'D': // set Dial
-       sscanf(&cmd_buf[1], "%04d", &arg);
-       Serial.print("Setting dial to ");
-       Serial.println(arg);
-       analogWrite(PANEL_PIN, arg);
-       btSerial.println("OK");
-       break;
+boolean set_leds_handler(TinyWebServer& web_server)
+{
+  //sscanf(&cmd_buf[1], "%04d,%04d,%04d,%04d,%04d", &red, &green, &blue, &on_duty, &off_duty);
+  //Serial.println("Got new LED settings");
+  web_server.send_error_code(200);
+  web_server.end_headers();
+  web_server << "TBD";
+  return true;
+}
 
-     case 'B': // start beeping
-       sscanf(&cmd_buf[1], "%04d", &arg);
-       Serial.print("Beeping for length ");
-       Serial.println(arg);
-       stop_beep_ms = millis() + arg;
-       btSerial.println("OK");
-       break;
+// Utility function to read a single int from postdata and return it
+int read_postdata_int(TinyWebServer &web_server)
+{
+  char buf[5] = {};
+  Client& client = web_server.get_client();
+  client.setTimeout(500);
+  client.readBytes(buf, sizeof(buf)-1);
+  return atoi(buf);
+}
 
-     case 'K': // read knob pos
-       char resp[5];
-       snprintf(resp, 5, "%04d", knob_pos);
-       btSerial.println(resp);
-       break;
+boolean set_gauge_handler(TinyWebServer& web_server)
+{
+  byte gauge = read_postdata_int(web_server);
+  analogWrite(PANEL_PIN, gauge);
+  web_server.send_error_code(200);
+  web_server.end_headers();
+  web_server << F("Setting gauge to ") << gauge << "\n";
+}
 
-     case 'P': // ping!
-       btSerial.println("OK");
-       break;
-
-      default:
-        Serial.println("Got garbage command!");
-        Serial.println(cmd_buf);
-   }
-   memset(cmd_buf, 0, cmd_buf_len);
+boolean beep_handler(TinyWebServer& web_server)
+{
+  int length = read_postdata_int(web_server);
+  stop_beep_ms = millis() + length;
+  web_server.send_error_code(200);
+  web_server.end_headers();
+  web_server << F("Beeping for length ") << length << "\n";
+  return true;
 }
