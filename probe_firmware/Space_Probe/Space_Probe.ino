@@ -85,6 +85,9 @@ void setup()
   btSerial.begin(9600);
 }
 
+void check_cmd(long ms);
+void process_cmd();
+
 void loop()
 {
   long ms = millis();
