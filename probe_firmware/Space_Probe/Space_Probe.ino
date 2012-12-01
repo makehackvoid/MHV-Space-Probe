@@ -41,7 +41,7 @@
  * for 5 seconds it'll start blinking the red LED quickly until it sees a response.
  */
 
-#include <NewSoftSerial.h>
+#include <SoftwareSerial.h>
 
 const int PANEL_PIN = 6;
 const int RED_PIN = 11;
@@ -58,7 +58,7 @@ const long BEEP_US = 1000000/BEEP_HZ;
 
 const int CMD_TIMEOUT_MS = 20000;
 
-NewSoftSerial btSerial(BT_RX, BT_TX);
+SoftwareSerial btSerial(BT_RX, BT_TX);
 
 int red = 255, green = 0, blue =0;
 long stop_beep_ms = 0;
