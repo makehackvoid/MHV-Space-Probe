@@ -1,45 +1,8 @@
 /*
- * The Space Probe firmware is a very thin stub program, which speaks a
- * simple serial command/response protocol.
+ * The Space Probe firmware is a very thin stub program, implementing a simple web API
  *
- * All numbers <X> are transmitted as 4-digit decimal integers, regardless of scale.
- *
- * Commands:
- *
- * Cmd: L<R>,<G>,<B>,<O>,<F>\n
- * Rsp: OK\n
- *
- * Set LEDs R,G,B levels (0-255) with blink cylce <O>ms On then <F>ms off.
- *
- * ****
- *
- * Cmd: B<N>
- * Rsp: OK\n
- *
- * Beep for N milliseconds
- *
- * *****
- *
- * Cmd: D<N>\n
- * Rsp: OK\n
- *
- * Set dial gauge PWM output to <N> (0-255)
- *
- * *****
- *
- * Cmd: K\n
- * Rsp: <N>\n
- *
- * Read back knob position <N> (0-1023)
- *
- * *****
- *
- * Cmd: P\n
- * Rsp: OK\n
- *
- * Ping! Check the probe is still there. If the probe doesn't see any command (including ping)
- * for 5 seconds it'll start blinking the red LED quickly until it sees a response.
- */
+ * See the help_handler method below for the help text (also available if you GET HTTP address /)
+ * */
 
 #include <Ethernet.h>
 #include <Flash.h>
@@ -47,23 +10,36 @@
 #include <TinyWebServer.h>
 #include <EthernetDHCP.h>
 
-const int PANEL_PIN = 6;
-const int RED_PIN = 11;
-const int BLUE_PIN = 9;
-const int GREEN_PIN = 10;
-const int KNOB_PIN = 0;
-const int SPEAKER_PIN = 4;
+boolean help_handler(TinyWebServer& web_server)
+{
+  web_server.send_error_code(200);
+  web_server.send_content_type("text/html");
+  web_server.end_headers();
+  web_server << F("<html><body><h1>Space Probe Has A Web Thingy</h1><ul>")
+             << F("<li>GET <a href='/is_alive'>/is_alive</a> -> quick check for life</li>")
+             << F("<li>GET <a href='/knob'>/knob</a> -> read knob position (0-1023)</li>")
+             << F("<li>POST /leds -> set LEDs, postdata is 4-digit integers: R,G,B,on_duty,off_duty ")
+             << F("(R,G,B are 0-255, on/off blink duty are ms 0-9999. Off 0 means always on, On 0 means always off.)</li>")
+             << F("<li>POST /dial -> set dial (panel meter) position, postdata is duty cycle 0-255</li>")
+             << F("<li>POST /buzz -> Buzz, postdata is length in ms (0-9999)(</li>")
+             << F("</ul></body></html>\n");
+  return true;
+}
 
-const int BT_RX = 2;
-const int BT_TX = 3;
+const int PANEL_PIN = 9;
+const int RED_PIN = 6;
+const int BLUE_PIN = 3;
+const int GREEN_PIN = 5;
+const int KNOB_PIN = 1;
+const int SPEAKER_PIN = 8;
 
-const int BEEP_HZ = 1720; // a pretty annoying pitch
-const long BEEP_US = 1000000/BEEP_HZ;
+const int BUZZ_HZ = 1720; // a pretty annoying pitch
+const long BUZZ_US = 1000000/BUZZ_HZ;
 
 const int CMD_TIMEOUT_MS = 20000;
 
 int red = 255, green = 0, blue =0;
-long stop_beep_ms = 0;
+long stop_buzz_ms = 0;
 long last_cmd_ms = 0;
 int on_duty=100, off_duty=500;
 
@@ -72,19 +48,20 @@ const int KNOB_SAMPLES=10;
 
 long last_ms = 0;
 
-boolean help_handler(TinyWebServer& web_server);
 boolean knob_handler(TinyWebServer& web_server);
 boolean set_leds_handler(TinyWebServer& web_server);
-boolean set_gauge_handler(TinyWebServer& web_server);
-boolean beep_handler(TinyWebServer& web_server);
+boolean set_dial_handler(TinyWebServer& web_server);
+boolean buzz_handler(TinyWebServer& web_server);
+boolean alive_handler(TinyWebServer& web_server);
 
 TinyWebServer::PathHandler handlers[] = {
   // Register the index_handler for GET requests on /
   {"/", TinyWebServer::GET, &help_handler },
+  {"/is_alive", TinyWebServer::GET, &alive_handler },
   {"/knob", TinyWebServer::GET, &knob_handler },
   {"/leds", TinyWebServer::POST, &set_leds_handler },
-  {"/gauge", TinyWebServer::POST, &set_gauge_handler },
-  {"/beep", TinyWebServer::POST, &beep_handler },
+  {"/dial", TinyWebServer::POST, &set_dial_handler },
+  {"/buzz", TinyWebServer::POST, &buzz_handler },
   {NULL}, // The array has to be NULL terminated this way
 };
 
@@ -120,7 +97,7 @@ void loop()
 
   if (last_ms > ms) { // millis() has wrapped! uptime ftw!
     last_cmd_ms = 0;
-    stop_beep_ms = 0;
+    stop_buzz_ms = 0;
   }
   last_ms = ms;
   bool lost = ( last_cmd_ms + CMD_TIMEOUT_MS ) < ms; // have we lost our link?
@@ -133,41 +110,47 @@ void loop()
   analogWrite(GREEN_PIN, blink_on ? (lost ? 0 : green) : 0);
   analogWrite(BLUE_PIN, blink_on ? (lost ? 0 : blue) : 0);
 
-  digitalWrite(SPEAKER_PIN, ( ms < stop_beep_ms )
-                        && ( (micros() & BEEP_US) < BEEP_US/2) );
+  digitalWrite(SPEAKER_PIN, ( ms < stop_buzz_ms )
+                        && ( (micros() & BUZZ_US) < BUZZ_US/2) );
 }
 
-boolean help_handler(TinyWebServer& web_server)
-{
+static void handler_response_common(TinyWebServer& web_server) {
   web_server.send_error_code(200);
-  web_server.send_content_type("text/html");
   web_server.end_headers();
-  web_server << F("<html><body><h1>Space Probe Has A Web Thingy</h1><ul>")
-             << F("<li>GET /knob -> read knob position</li>")
-             << F("<li>POST /leds -> set LEDs, postdata has keys R,G,B,on_duty,off_duty</li>")
-             << F("<li>POST /gauge -> set Gauge position, postdata is number</li>")
-             << F("<li>POST /beep -> Beep, postdata is length</li>")
-             << F("</ul></body></html>\n");
   last_cmd_ms = millis();
+}
+
+boolean alive_handler(TinyWebServer& web_server){
+  handler_response_common(web_server);
+  web_server << F("OK");
   return true;
 }
 
 boolean knob_handler(TinyWebServer& web_server)
 {
-  web_server.send_error_code(200);
-  web_server.end_headers();
-  web_server << knob_pos << "\n";
-  last_cmd_ms = millis();
+  handler_response_common(web_server);
+  web_server << knob_pos;
   return true;
 }
 
 boolean set_leds_handler(TinyWebServer& web_server)
 {
-  //sscanf(&cmd_buf[1], "%04d,%04d,%04d,%04d,%04d", &red, &green, &blue, &on_duty, &off_duty);
-  //Serial.println("Got new LED settings");
-  web_server.send_error_code(200);
-  web_server.end_headers();
-  web_server << "TBD";
+  char buf[40];
+
+  Client& client = web_server.get_client();
+  client.setTimeout(500);
+  client.readBytesUntil('\n',buf,40);
+
+  int r = sscanf(buf, "%04d,%04d,%04d,%04d,%04d", &red, &green, &blue, &on_duty, &off_duty);
+  if(r != 5) {
+    web_server.send_error_code(500);
+    web_server.end_headers();
+    web_server << F("Invalid LED string");
+  }
+  else {
+    handler_response_common(web_server);
+    web_server << F("OK");
+  }
   return true;
 }
 
@@ -181,21 +164,20 @@ int read_postdata_int(TinyWebServer &web_server)
   return atoi(buf);
 }
 
-boolean set_gauge_handler(TinyWebServer& web_server)
+boolean set_dial_handler(TinyWebServer& web_server)
 {
-  byte gauge = read_postdata_int(web_server);
-  analogWrite(PANEL_PIN, gauge);
-  web_server.send_error_code(200);
-  web_server.end_headers();
-  web_server << F("Setting gauge to ") << gauge << "\n";
+  byte dial = read_postdata_int(web_server);
+  analogWrite(PANEL_PIN, dial);
+  handler_response_common(web_server);
+  web_server << F("OK") << dial;
+  return true;
 }
 
-boolean beep_handler(TinyWebServer& web_server)
+boolean buzz_handler(TinyWebServer& web_server)
 {
   int length = read_postdata_int(web_server);
-  stop_beep_ms = millis() + length;
-  web_server.send_error_code(200);
-  web_server.end_headers();
-  web_server << F("Beeping for length ") << length << "\n";
+  stop_buzz_ms = millis() + length;
+  handler_response_common(web_server);
+  web_server << F("OK") << length;
   return true;
 }
