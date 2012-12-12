@@ -4,8 +4,8 @@
 
 config = {
 
-	-- Spaceprobe name
-	-- ie "rfcomm0" for a real probe
+	-- Spaceprobe hostname or IP
+	-- ie "spaceprobe.mhv" for a real probe
 	--     "simulation" for a simulated probe
 	spaceprobe_name = "simulation",
 
@@ -61,13 +61,13 @@ config = {
  	-- Calibration table for the knob
 	-- values are [raw-value, hours} where raw-value is
 	-- the ADC reading 0-1023 from the probe
-	knob_table = { 
-		{ 149, 0 }, 
+	knob_table = {
+		{ 149, 0 },
 		{ 235, 1},
 		{ 343, 2},
 		{ 439, 3},
 		{ 546, 4},
-		{ 662, 5 }, 
+		{ 662, 5 },
 		{ 762, 6 },
 		{ 860, 7 },
 		{ 957, 8 },
