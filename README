@@ -10,3 +10,11 @@ Full details at http://www.makehackvoid.com/projects/space-probe/
   designed to run on the probe itself, with a standard Arduino
   ethernet shield (or, in the case of the MHV space probe, a
   Freetronics EtherTen.)
+
+# Copyright & Licensing
+
+Copyright (c) Angus Gratton 2011-2012, except for the contents of
+controller/mqtt_library.lua which is Copyright 2011-2012 Geekscape
+Pty. Ltd as described in that file.
+
+Released under the AGPLv3 as described in the accompanying file LICENSE.
