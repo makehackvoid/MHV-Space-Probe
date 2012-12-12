@@ -2,10 +2,9 @@ What This Is
 ============
 
 Controller program for the MHV Space Probe. Is designed to run in Lua
-under Linux and talk to the probe via Bluetooth RFCOMM, configured as a
-device /dev/rfcommX.
+under Linux and talk to the probe's Arduino sketch via HTTP.
 
-The controller also supports a simulation mode (set in config.lua) 
+The controller also supports a simulation mode (set in config.lua)
 whereby the probe reads its raw position from /tmp/space_probe_knob
 and interacts with the user via stdout. See probe_sim.lua for details.
 
