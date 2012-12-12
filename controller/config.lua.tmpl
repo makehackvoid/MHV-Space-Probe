@@ -11,11 +11,11 @@ config = {
 
 	-- Seconds after the knob stops moving
 	-- before we react
-	knob_latency = 2,
+	knob_latency = 0.5,
 
 	-- Knob has to move by this much (in raw values, scale 0-1023)
 	-- to be considered a new value (Note that knob value is already smoothed on Arduino side)
-	knob_deadband = 15,
+	knob_deadband = 5,
 
 	-- Append  this text to the email body
 	email_suffix ="How do you know if the space is really still open? Visit http://twitter.com/makehackvoid and check for further updates, " ..

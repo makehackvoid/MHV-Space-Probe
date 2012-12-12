@@ -12,7 +12,7 @@ require "posix"
 
 local smtp = require("socket.smtp")
 
-twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret, 
+twitter_client = client(config.oauth_consumer_key, config.oauth_consumer_secret,
 								config.oauth_access_key, config.oauth_access_secret)
 
 -- anything waiting to go out gets pushed onto this list
@@ -171,7 +171,7 @@ function common_processing(is_open, was_offline)
 		table.insert(tweet_queue, "Space Probe here. It gets lonely in this empty space sometimes. Come and keep me company.")
 	end
 
-	posix.sleep(1)
+	posix.sleep(0.5)
 
 	-- check offline status
 	if probe.get_offline() then
@@ -197,7 +197,7 @@ end
 -- Space just opened, or opening hours changed
 function space_closing_in(hours, was_already_open)
         old_est_closing = est_closing_time
-	est_closing_time = os.time() + hours*60*60	
+	est_closing_time = os.time() + hours*60*60
 	log("Estimated closing " .. os.date(nil, est_closing_time))
 
 	if not was_already_open then
@@ -213,12 +213,12 @@ function space_closing_in(hours, was_already_open)
 	if was_already_open then
 	   old_duration_estimate = old_est_closing - space_opened_at -- how long we thought we'd be open for
 	   new_duration_estimate = est_closing_time - space_opened_at -- how long we now think
-	   if new_duration_estimate > old_duration_estimate 
+	   if new_duration_estimate > old_duration_estimate
 	      and new_duration_estimate < old_duration_estimate * (config.overstay_silent_ratio + 1) then
-	      log("Skipping stay-open message, is only staying additional " 
+	      log("Skipping stay-open message, is only staying additional "
 		  .. (est_closing_time - old_est_closing)/60/60 .. " hours")
 	      warnings = 0
-	      return space_is_open()	   
+	      return space_is_open()
 	   end
 	end
 	update_world(msg, not was_already_open)
