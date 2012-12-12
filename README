@@ -7,4 +7,6 @@ Full details at http://www.makehackvoid.com/projects/space-probe/
   file in this directory.
 
 * probe_firmware/Space_Probe/ contains the Arduino sketch which is
-  designed to run on the probe itself.
+  designed to run on the probe itself, with a standard Arduino
+  ethernet shield (or, in the case of the MHV space probe, a
+  Freetronics EtherTen.)

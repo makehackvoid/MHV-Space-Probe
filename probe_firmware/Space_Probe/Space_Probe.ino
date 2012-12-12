@@ -2,7 +2,8 @@
  * The Space Probe firmware is a very thin stub program, implementing a simple web API
  *
  * See the help_handler method below for the help text (also available if you GET HTTP address /)
- * */
+ *
+ */
 
 #include <Ethernet.h>
 #include <Flash.h>
