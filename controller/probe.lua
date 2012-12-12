@@ -41,14 +41,31 @@ local function get_offline()
    return rsp ~= "OK"
 end
 
+local last_dial = nil
+
 local function set_dial(raw_value)
-   return probe_request("/dial",
-                        string.format("%04d", raw_value))
+   if last_dial ~= raw_value then
+      last_dial = raw_value
+      return probe_request("/dial",
+                           string.format("%04d", raw_value))
+   end
 end
 
+
+local last_r,last_g,last_b,last_on,last_off
+
 local function set_leds(r,g,b,blink_on_time,blink_off_time)
-   return probe_request("/leds",
-                        string.format("%04d,%04d,%04d,%04d,%04d",r,g,b,blink_on_time or 1,blink_off_time or 0))
+   if r~=last_r or g~=last_g or b~=last_b
+      or blink_on_time~=last_on or blink_off_time~=last_off then
+      last_r = r
+      last_g = g
+      last_b = b
+      last_on = blink_on_time
+      last_off = blink_off_time
+      return probe_request("/leds",
+                           string.format("%04d,%04d,%04d,%04d,%04d",r,g,b,
+                                         blink_on_time or 1,blink_off_time or 0))
+   end
 end
 
 local function buzz(seconds)
