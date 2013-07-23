@@ -1,6 +1,6 @@
 This is the software for the Make, Hack, Void Space Probe
 
-Full details at http://www.makehackvoid.com/projects/space-probe/
+Full details at http://www.makehackvoid.com/group-projects/mhv-space-probe/
 
 * controller/ contains the Lua program, designed to run under Linux and
   talk to the probe itself. There is a separate (more detailed) README
