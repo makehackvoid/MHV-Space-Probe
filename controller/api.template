@@ -1,7 +1,7 @@
 {
    "status":"{{status}}",
-   "space":"Make, Hack, Void Canberra",
-   "url":"http://www.makehackvoid.com",
+   "space":"MakeHackVoid Canberra",
+   "url":"https://makehackvoid.com",
    "lat":-35.244511,
    "lon":149.145911,
    "api":"0.12",
@@ -12,11 +12,11 @@
       "closed":"http://space.makehackvoid.com/resources/MHV_icon_closed.png"
    },
    "contact":{
-      "ml":"http://www.makehackvoid.com/community/mailing-lists",
+      "ml":"https://makehackvoid.com/contacts/#mailing_lists",
       "twitter":"@MakeHackVoid",
       "irc":"irc://irc.freenode.net/#makehackvoid",
       "email":"makers@makehackvoid.com"
    },
-   "address":"Downer Business Park, Frencham St, Downer, ACT 2612",
+   "address":"Ginninderra House, Evelyn Parker Place, Belconnen ACT 2617",
    "open":{{open}}
 }
